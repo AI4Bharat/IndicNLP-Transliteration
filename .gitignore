@@ -1,0 +1,6 @@
+.vscode
+data/*
+hypotheses/*
+
+!README.md
+!readme.md
