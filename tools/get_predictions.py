@@ -7,6 +7,7 @@ Usage:
 ENGINES:
 - google
 - quillpad
+- varnam
 """
 
 import os, sys, json, requests
@@ -35,14 +36,8 @@ def gtransliterate(word, lang_code, num_suggestions=10):
 		return []
 	return r[1][0][1]
 
-def run_gtransliteration_bulk(input_list, lang_code):
-    predictions = {}
-    for word in tqdm(input_list, desc='gTransliterating...', unit=' Xlits'):
-        predictions[word] = gtransliterate(word, lang_code, TOP_K)
-    return predictions
-
 QP_API = 'http://xlit.quillpad.in/quillpad_backend2/processWordJSON?lang=%s&inString=%s'
-def qp_transliterate(word, lang):
+def qp_transliterate(word, lang, num_suggestions=10):
     response = requests.request('GET', QP_API % (lang, word), allow_redirects=False, timeout=5)
     if response.status_code != 200:
         print('Request failed with status code: %d\nERROR: %s' % (response.status_code, response.text), file=sys.stderr)
@@ -51,12 +46,27 @@ def qp_transliterate(word, lang):
     suggestions = r['twords'][0]['options']
     if r['itrans'] not in suggestions:
         suggestions.append(r['itrans'])
-    return suggestions
+    return suggestions[:num_suggestions]
 
-def run_qp_transliteration_bulk(input_list, lang):
+def run_qp_bulk(input_list, lang):
     predictions = {}
     for word in tqdm(input_list, desc='qpTransliterating...', unit=' Xlits'):
         predictions[word] = qp_transliterate(word, lang)
+    return predictions
+
+VARNAM_API = 'https://api.varnamproject.com/tl/%s/%s'
+def varnam_transliterate(word, lang_code, num_suggestions=10):
+    response = requests.request('GET', VARNAM_API % (lang_code, word), allow_redirects=False, timeout=5)
+    if response.status_code != 200:
+        print('Request failed with status code: %d\nERROR: %s' % (response.status_code, response.text), file=sys.stderr)
+        return []
+    r = json.loads(response.text)
+    return r['result'][:num_suggestions]
+
+def run_bulk(input_list, lang_code, transliterator):
+    predictions = {}
+    for word in tqdm(input_list, desc='Transliterating...', unit=' Xlits'):
+        predictions[word] = transliterator(word, lang_code, TOP_K)
     return predictions
 
 def predict_transliterations(input_json, input_txt, xlit_engine, lang):
@@ -74,9 +84,11 @@ def predict_transliterations(input_json, input_txt, xlit_engine, lang):
             for line in f: input_data.add(line.strip())
     
     if 'google' in xlit_engine:
-        return run_gtransliteration_bulk(input_data, LANG2CODE[lang])
+        return run_bulk(input_data, LANG2CODE[lang], gtransliterate)
     elif 'quill' in xlit_engine:
-        return run_qp_transliteration_bulk(input_data, lang)
+        return run_qp_bulk(input_data, lang)
+    elif 'varnam' in xlit_engine:
+        return run_bulk(input_data, LANG2CODE[lang], varnam_transliterate)
     else:
         sys.exit(xlit_engine, 'xlit engine is not supported.')
 
@@ -101,7 +113,7 @@ def __main(args):
         sys.exit(args.lang, 'language is not supported.')
     
     if args.infer:
-        predict_word(args.infer, args.lang, lagnargs.xlit_src.lower())
+        predict_word(args.infer, args.lang, args.xlit_src.lower())
         return
 
     if not args.json and not args.txt:
