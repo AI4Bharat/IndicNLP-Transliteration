@@ -5,3 +5,4 @@ hypotheses/*
 !README.md
 !readme.md
 __pycache__
+.ipynb_checkpoints/
