@@ -193,6 +193,11 @@ def read_data(gt_json, file_type, args):
             if inp not in pred_data:
                 pred_data[inp] = []
             pred_data[inp].append(out)
+            
+        if args.predictions_json:
+            # Save as JSON for future reference
+            with open(args.predictions_json, 'w', encoding='utf8') as f:
+                json.dump(pred_data, f, ensure_ascii=False, indent=4, sort_keys=True)
         
         return gt_data, pred_data
     
