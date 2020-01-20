@@ -2,8 +2,12 @@
 A script to calculate accuracy, mAP, F1-score, etc. of transliterations
 given the predictions and ground truth as JSONs.
 
-Usage:
-    <<script.py>> --ground-truth EnHi_dev.json --predictions Google/EnHi_dev.json [--output scores.csv]
+USAGE:
+    Example 1: Predictions file format - JSON
+    <<script.py>> --ground-truth-json EnHi_dev.json --prediction-ftype json --predictions-json Google/EnHi_dev.json [--save-output-csv scores.csv]
+    
+    Example 2: Predictions file format - txt
+    <<script.py>> --ground-truth-json EnHi_dev.json --prediction-ftype txt --input-txt EnHi_dev.en --output-txt Moses_out.hi [--save-output-csv scores.csv]
 
 Taken from: https://github.com/snukky/news-translit-nmt/blob/master/tools/news_evaluation.py
 """
@@ -141,23 +145,67 @@ def write_details(output_fname, input_data, test_data, acc, f, f_best_match, mrr
     
     f_out.close()
 
-def print_scores(gt_json, pred_json, output_fname):
-    # Read test data ground truth
+def read_data(gt_json, file_type, args):
+    
+    # Check if files exist
     if not os.path.isfile(gt_json):
         sys.exit('ERROR:', gt_json, 'Not Found')
+    # Read test data ground truth
     with open(gt_json, encoding='utf8') as f:
-        gt_data = json.load(f)
+            gt_data = json.load(f)
     
-    # Read input data (predictions)
-    if not os.path.isfile(pred_json):
-        sys.exit('ERROR:', pred_json, 'Not Found')
-    with open(pred_json, encoding='utf8') as f:
-        pred_data = json.load(f)
+    # Read Predictions based on file_type
+    if file_type.lower() == 'json':
+        pred_json = args.predictions_json
+        if not os.path.isfile(pred_json):
+            sys.exit('ERROR:', pred_json, 'Not Found')
+
+        # Read predictions
+        with open(pred_json, encoding='utf8') as f:
+            pred_data = json.load(f)
+            
+        return gt_data, pred_data
+    
+    elif file_type.lower() == 'txt':
+        # Read predictions from 2 parallel txt files
+        infile = args.input_txt
+        outfile = args.output_txt
+        if not os.path.isfile(infile):
+            sys.exit('ERROR:', infile, 'Not Found')
+        if not os.path.isfile(outfile):
+            sys.exit('ERROR:', outfile, 'Not Found')
+        
+        # Read all the input and output lines into memory
+        with open(infile) as f:
+            input_lines = f.readlines()
+        with open(outfile) as f:
+            output_lines = f.readlines()
+        
+        if len(input_lines) != len(output_lines):
+            sys.exit('ERROR: The number of lines in input (%d) and output (%d) do not match!'
+                    % (len(input_lines), len(output_lines)))
+        
+        pred_data = {}
+        # Assumes one word per line
+        for inp, out in zip(input_lines, output_lines):
+            inp = inp.strip().replace(' ', '') #Remove spaces
+            out = out.strip().replace(' ', '')
+            if inp not in pred_data:
+                pred_data[inp] = []
+            pred_data[inp].append(out)
+        
+        return gt_data, pred_data
+    
+    else:
+        sys.exit('ERROR: Unrecognized predictions file format:', file_type)
+
+def print_scores(args):
+    gt_data, pred_data = read_data(args.ground_truth_json, args.prediction_ftype, args)
 
     acc, f, f_best_match, mrr, map_ref = evaluate(pred_data, gt_data)
 
-    if output_fname:
-        write_details(output_fname, pred_data, gt_data, acc, f, f_best_match, mrr, map_ref)
+    if args.save_output_csv:
+        write_details(args.save_output_csv, pred_data, gt_data, acc, f, f_best_match, mrr, map_ref)
 
     N = len(acc) 
     sys.stdout.write('ACC:          %f\n' % (float(sum([acc[src_word] for src_word in acc.keys()]))/N))
@@ -170,8 +218,10 @@ def print_scores(gt_json, pred_json, output_fname):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ground-truth', type=str, required=True)
-    parser.add_argument('--predictions', type=str, required=True)
-    parser.add_argument('--output', type=str)
-    args = parser.parse_args()
-    print_scores(args.ground_truth, args.predictions, args.output)
+    parser.add_argument('--ground-truth-json', type=str, required=True)
+    parser.add_argument('--predictions-json', type=str)
+    parser.add_argument('--prediction-ftype', type=str, required=True)
+    parser.add_argument('--input-txt', type=str)
+    parser.add_argument('--output-txt', type=str)
+    parser.add_argument('--save-output-csv', type=str)
+    print_scores(parser.parse_args())
