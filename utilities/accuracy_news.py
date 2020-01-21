@@ -99,6 +99,8 @@ def evaluate(input_data, test_data):
     map_ref = {}
     #map_sys = {}
     
+    empty_xlits = []
+    
     for src_word in test_data.keys():
         if src_word in input_data and len(input_data[src_word]) > 0:
             candidates = input_data[src_word]
@@ -115,7 +117,7 @@ def evaluate(input_data, test_data):
             #map_sys[src_word] = mean_average_precision(candidates, references, len(candidates))
             
         else:
-            print('Warning: No transliterations found for word %s\n' % src_word)
+            empty_xlits.append(src_word)
             mrr[src_word] = 0.0
             acc[src_word] = 0.0
             f[src_word] = 0.0
@@ -123,6 +125,10 @@ def evaluate(input_data, test_data):
             #map_n[src_word] = 0.0
             map_ref[src_word] = 0.0
             #map_sys[src_word] = 0.0
+        
+    if len(empty_xlits) > 0:
+        print('Warning: No transliterations found for following %d words out of %d:' % (len(empty_xlits), len(test_data.keys())))
+        print(empty_xlits)
             
     return acc, f, f_best_match, mrr, map_ref
 
@@ -212,7 +218,8 @@ def print_scores(args):
     if args.save_output_csv:
         write_details(args.save_output_csv, pred_data, gt_data, acc, f, f_best_match, mrr, map_ref)
 
-    N = len(acc) 
+    N = len(acc)
+    sys.stdout.write('SCORES FOR %d SAMPLES:\n\n' % N)
     sys.stdout.write('ACC:          %f\n' % (float(sum([acc[src_word] for src_word in acc.keys()]))/N))
     sys.stdout.write('Mean F-score: %f\n' % (float(sum([f[src_word] for src_word in f.keys()]))/N))
     sys.stdout.write('MRR:          %f\n' % (float(sum([mrr[src_word] for src_word in mrr.keys()]))/N))
