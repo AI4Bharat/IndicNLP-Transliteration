@@ -3,9 +3,14 @@ Processes the JSONs dumped by WikiExtractor to extract words with its frequency.
 
 PREREQUISITE:
     python WikiExtractor.py --processes 4 -o extracts/ --json gomwiki-20200101-pages-articles-multistream.xml > extracts/logs.txt 2>&1
-    
+
 USAGE:
-    <script.py> --input-folder extracts/ --output-csv word_list.csv --lang-code gom
+    Example-1: Extract all unique words with frequency into a CSV
+    $ <script.py> --input-folder extracts/ --output-csv word_list.csv --lang konkani
+    
+    Example-2: Get only top-1000 words of length >= 5
+    $ <script.py> --top-k 1000 --min-chars 5 --top-csv top_words.csv --input-folder extracts/ --output-csv word_list.csv --lang konkani
+    
 '''
 import os, sys, json
 from glob import glob
@@ -45,18 +50,30 @@ def tokenize(string, allowed_charset):
                 new_string += ' '
     return new_string.split()
 
-def extract_words(wiki_json_folder, output_csv, script_name, allow_numbers=False):
-    # Prepare the set of unicode chars that we're interested in
-    alphabets = unicode_map[script_name]
-    if not allow_numbers:
-        numbers = unicode_numbers[script_name]
-        alphabets = [c for c in alphabets if c not in numbers]
+def extract_txt_words(data_folder, alphabets, word_freq={}):
+    # Find .txt files if any and process them line by line
+    txt_files = sorted(glob(os.path.join(data_folder, '*.txt')))
+    print('Starting to process %d txt files...' % len(txt_files))
     
-    # Find files starting with 'wiki_'
-    json_files = sorted(glob(os.path.join(wiki_json_folder, 'wiki_*')))
-    print('Starting to process %d files...' % len(json_files))
+    uniq_words = set()
+    for txt_file in txt_files:
+        with open(txt_file) as f:
+            lines = f.readlines()
+        for line in tqdm(lines, desc='Processing '+txt_file, unit='lines'):
+            for word in tokenize(line, alphabets):
+                if word not in word_freq: word_freq[word] = 0
+                word_freq[word] += 1
+                uniq_words.add(word)
     
-    word_freq = {}
+    print('Extracted %d Unique words from Txt files\n' % len(uniq_words))
+    return word_freq
+
+def extract_wiki_words(data_folder, alphabets, word_freq={}):
+    # Find files starting with 'wiki_' (which are assumed JSON)
+    json_files = sorted(glob(os.path.join(data_folder, 'wiki_*')))
+    print('Starting to process %d WikiJSON files...' % len(json_files))
+    
+    uniq_words = set()
     for json_file in json_files:
         with open(json_file) as f:
             lines = f.readlines()
@@ -66,6 +83,20 @@ def extract_words(wiki_json_folder, output_csv, script_name, allow_numbers=False
             for word in tokenize(json.loads(line)['text'], alphabets):
                 if word not in word_freq: word_freq[word] = 0
                 word_freq[word] += 1
+                uniq_words.add(word)
+    
+    print('Extracted %d Unique words from Wiki\n' % len(uniq_words))
+    return word_freq
+
+def extract_words(data_folder, output_csv, script_name, allow_numbers=False):
+    # Prepare the set of unicode chars that we're interested in
+    alphabets = unicode_map[script_name]
+    if not allow_numbers:
+        numbers = unicode_numbers[script_name]
+        alphabets = [c for c in alphabets if c not in numbers]
+    
+    word_freq = extract_wiki_words(data_folder, alphabets)
+    word_freq = extract_txt_words(data_folder, alphabets, word_freq)
     
     print('\nSaving %d words to %s\n' % (len(word_freq), output_csv))
     with open(output_csv, 'w') as f:
