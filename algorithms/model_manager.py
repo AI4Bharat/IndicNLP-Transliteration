@@ -25,17 +25,20 @@ class Xlit_ModelMgr(nn.Module):
     def trainer(self, hparams, dataloader, device='cpu'):
         num_epochs, loss_file, ckpt_dir = hparams.epochs, hparams.loss_file, hparams.ckpt_dir
         self.optimizer = optim.Adam(list(self.model.parameters()), lr=hparams.lr)
+        teacher_train_epochs = hparams.teacher_epochs if 'teacher_epochs' in hparams else 0
+        
         if loss_file:
             loss_file = open(loss_file, 'w')
         for epoch in range(1, num_epochs+1):
             start = time.time()
             self.model.train()
+            teacher_force = epoch <= teacher_train_epochs
             
             total_loss = 0
             for batch_num, (inp, inp_len, target_ohe, target) in enumerate(dataloader, start=1):
                 loss = 0
                 x, x_len, y_ohe, y = sort_tensorbatch(inp, inp_len, target_ohe, target, device)
-                outputs = self.model(x, x_len, y_ohe, device)
+                outputs = self.model(x, x_len, y_ohe, teacher_force, device)
                 for t in range(1, y_ohe.size(1)):
                     loss += self.masked_loss(y[:, t], outputs[t])
                 batch_loss = (loss / int(y.size(1)))

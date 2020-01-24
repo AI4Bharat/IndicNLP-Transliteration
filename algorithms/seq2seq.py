@@ -107,9 +107,9 @@ class EncoderDecoder(nn.Module):
         self.output_vocab_size = len(output_vocab)
         self.MAX_DECODE_STEPS = 25
     
-    def decode(self, dec_hidden, enc_output, y_ohe):
+    def decode(self, dec_hidden, enc_output, y_ohe=None, teacher_force=False):
         outputs = []
-        if y_ohe is not None:
+        if teacher_force and y_ohe is not None:
             dec_input = y_ohe[:, 0].unsqueeze(1)
             outputs.append(y_ohe[:, 0])
             for t in range(1, y_ohe.size(1)):
@@ -132,11 +132,11 @@ class EncoderDecoder(nn.Module):
                 dec_input = one_hot.detach().unsqueeze(1)
         return outputs
     
-    def forward(self, x, x_len, y_ohe=None, device='cpu'):
+    def forward(self, x, x_len, y_ohe=None, teacher_force=False, device='cpu'):
         # Run encoder
         enc_output, enc_hidden = self.encoder(x.float(), x_len)
 
         # Run decoder step-by-step
-        return self.decode(enc_hidden, enc_output, y_ohe)
+        return self.decode(enc_hidden, enc_output, y_ohe, teacher_force)
     
     

@@ -8,6 +8,7 @@
         batch_size:         32,
         lr:                 0.001,
         epochs:             50,
+        teacher_epochs:     20,
         
         infer_batch_size:   64,
         
@@ -19,6 +20,5 @@
         type:           seq2seq,
         hidden_units:   256
     }
-    
     
 }
