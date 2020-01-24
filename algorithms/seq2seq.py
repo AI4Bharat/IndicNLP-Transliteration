@@ -97,36 +97,15 @@ class Decoder(nn.Module):
         x = self.fc(output)
         
         return x, state, attention_weights
-    
-import time
-import torch.optim as optim
-from tqdm import tqdm
-from utilities.dataloader import sort_tensorbatch
 
 class EncoderDecoder(nn.Module):
     def __init__(self, units, input_vocab, output_vocab, embedding_dim):
         super(EncoderDecoder, self).__init__()
         self.encoder = Encoder(len(input_vocab), units)
         self.decoder = Decoder(len(output_vocab), units, units, embedding_dim)
-        self.criterion = nn.NLLLoss(ignore_index=0)#, size_average=True)
-        self.softmax = nn.LogSoftmax(dim=1)
         self.start_code, self.end_code = input_vocab['$'], input_vocab['#']
-        self.input_vocab = input_vocab
-        self.output_rev_vocab = {id:alpha for alpha, id in output_vocab.items()}
         self.output_vocab_size = len(output_vocab)
         self.MAX_DECODE_STEPS = 25
-        
-        self.optimizer = optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()), 
-                       lr=0.001)
-        
-    def masked_loss(self, real, pred):
-        """ Only consider non-zero inputs in the loss; mask needed """
-        #mask = 1 - np.equal(real, 0) # assign 0 to all above 0 and 1 to all 0s
-        #print(mask)
-        mask = real.ge(1).type(torch.float)
-
-        loss_ = self.criterion(self.softmax(pred), real) * mask 
-        return torch.mean(loss_)
     
     def decode(self, dec_hidden, enc_output, y_ohe):
         outputs = []
@@ -160,65 +139,4 @@ class EncoderDecoder(nn.Module):
         # Run decoder step-by-step
         return self.decode(enc_hidden, enc_output, y_ohe)
     
-    def trainer(self, num_epochs, dataloader, device='cpu', ckpt_dir=None, loss_file=None):
-        if loss_file:
-            loss_file = open(loss_file, 'w')
-        for epoch in range(1, num_epochs+1):
-            start = time.time()
-            self.train()
-            
-            total_loss = 0
-            for batch_num, (inp, inp_len, target_ohe, target) in enumerate(dataloader, start=1):
-                loss = 0
-                x, x_len, y_ohe, y = sort_tensorbatch(inp, inp_len, target_ohe, target, device)
-                outputs = self(x, x_len, y_ohe, device)
-                for t in range(1, y_ohe.size(1)):
-                    loss += self.masked_loss(y[:, t], outputs[t])
-                batch_loss = (loss / int(y.size(1)))
-                total_loss += batch_loss
-                
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                
-                if batch_num % 100 == 0:
-                    print('Epoch {} Batch {} Loss {:.4f}'.format(epoch, batch_num, batch_loss.detach().item()))
-                    if loss_file:
-                        loss_file.write(str(batch_loss.detach().item())); loss_file.write('\n')
-                    
-            print('END OF EPOCH {} -- LOSS {:.4f} -- TIME {:.3f}'.format(
-                epoch, len(dataloader)//dataloader.batch_size, time.time() - start))
-            if ckpt_dir:
-                torch.save(self.state_dict(), ckpt_dir+'/model-e%d.pt' % epoch)
-        if loss_file:
-            loss_file.close()
-            
-    def infer(self, word):
-        # Add markers and convert to OHE
-        word = '$' + word + '#'
-        word = [self.input_vocab[c] for c in word]
-        ohe = torch.zeros((len(word), 1, len(self.input_vocab)))
-        for i, c in enumerate(word):
-            ohe[i][0][c] = 1
-        # Run inference!
-        output = self(ohe, [len(word)])
-        
-        # Softmax outputs to lang-word
-        result = ''
-        for out in output[1:]:
-            val, indices = out.topk(1)
-            index = indices.tolist()[0][0]
-            if index == 0 or index == self.end_code:
-                break
-            result += self.output_rev_vocab[index]
-        return result
     
-    def run_test(self, test_dataloader, save_json=None):
-        data = {}
-        for eng_word in tqdm(test_dataloader.eng_words):
-            data[eng_word.lower()] = [self.infer(eng_word)]
-        if save_json:
-            import json
-            with open(save_json, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4, sort_keys=True)
-        return data
