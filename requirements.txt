@@ -3,3 +3,4 @@ requests
 torch
 torchvision
 tqdm
+munch

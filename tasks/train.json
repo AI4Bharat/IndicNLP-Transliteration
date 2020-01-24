@@ -1,0 +1,24 @@
+{
+    lang:               hindi,
+    
+    train_data_json:    data/NEWS2018_JSON/EnHi_train.json,
+    test_data_json:     data/NEWS2018_JSON/EnHi_dev.json,
+    
+    hyperparams: {
+        batch_size:         32,
+        lr:                 0.001,
+        epochs:             50,
+        
+        infer_batch_size:   64,
+        
+        loss_file:          hypotheses/loss.txt,
+        ckpt_dir:           hypotheses
+    },
+
+    model: {
+        type:           seq2seq,
+        hidden_units:   256
+    }
+    
+    
+}
