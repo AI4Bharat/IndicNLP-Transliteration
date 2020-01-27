@@ -118,7 +118,7 @@ class EncoderDecoder(nn.Module):
                 # use teacher forcing - feeding the target as the next input (via dec_input)
                 dec_input = y_ohe[:, t].unsqueeze(1)
         else:
-            dec_input = torch.zeros(enc_output.shape[1], 1, self.output_vocab_size) #(batch_size, 1, out_size)
+            dec_input = torch.zeros(enc_output.shape[1], 1, self.output_vocab_size).to(enc_output.device) #(batch_size, 1, out_size)
             dec_input[:, 0, self.start_code] = 1
             outputs.append(dec_input.squeeze(1))
             
@@ -127,16 +127,13 @@ class EncoderDecoder(nn.Module):
                 prediction, dec_hidden, _ = self.decoder(dec_input.float(), dec_hidden, enc_output)
                 outputs.append(prediction)
                 max_idx = torch.argmax(prediction, 1, keepdim=True)
-                one_hot = torch.zeros(prediction.shape)
+                one_hot = torch.zeros(prediction.shape).to(prediction.device)
                 one_hot.scatter_(1, max_idx, 1) # In dim 1, set max_idx's as 1
                 dec_input = one_hot.detach().unsqueeze(1)
         return outputs
     
-    def forward(self, x, x_len, y_ohe=None, teacher_force=False, device='cpu'):
+    def forward(self, x, x_len, y_ohe=None, teacher_force=False):
         # Run encoder
         enc_output, enc_hidden = self.encoder(x.float(), x_len)
-
         # Run decoder step-by-step
         return self.decode(enc_hidden, enc_output, y_ohe, teacher_force)
-    
-    

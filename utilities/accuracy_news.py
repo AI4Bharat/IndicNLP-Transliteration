@@ -85,7 +85,7 @@ def inverse_rank(candidates, reference):
     else:
         return 1.0/(rank+1)
 
-def evaluate(input_data, test_data):
+def evaluate(input_data, test_data, verbose=True):
     '''
     Evaluates all metrics to save looping over input_data several times
     n is the map-n parameter
@@ -126,7 +126,7 @@ def evaluate(input_data, test_data):
             map_ref[src_word] = 0.0
             #map_sys[src_word] = 0.0
         
-    if len(empty_xlits) > 0:
+    if len(empty_xlits) > 0 and verbose:
         print('Warning: No transliterations found for following %d words out of %d:' % (len(empty_xlits), len(test_data.keys())))
         print(empty_xlits)
             

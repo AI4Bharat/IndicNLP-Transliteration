@@ -7,17 +7,25 @@ from utilities.dataloader import Transliteration_Dataset, sort_tensorbatch
 from utilities.lang_utils import get_lang_chars
 from algorithms.model_manager import Xlit_ModelMgr
 
-def get_model(model_cfg, data, device='cpu'):
+def get_model(model_cfg, data):
     if model_cfg.type == 'seq2seq':
         from algorithms.seq2seq import EncoderDecoder
         model = EncoderDecoder(model_cfg.hidden_units, data.eng_alpha2index, data.lang_alpha2index, model_cfg.hidden_units)
     else:
         sys.exit(model_cfg.type, 'NOT SUPPORTED')
-    return model.to(device)
+    return model
 
 def trainer_loop(model, config, train_dataloader, test_dataloader=None, device='cpu'):
-    model_mgr = Xlit_ModelMgr(model, train_dataloader.dataset.eng_alpha2index, train_dataloader.dataset.lang_alpha2index)
-    model_mgr.trainer(config.hyperparams, train_dataloader, device)
+    model_mgr = Xlit_ModelMgr(model, train_dataloader.dataset.eng_alpha2index, train_dataloader.dataset.lang_alpha2index, device)
+    model_mgr.trainer(config.hyperparams, train_dataloader, test_dataloader)
+
+def load_and_validate_cfg(config_json):
+    if not os.path.isfile(config_json):
+        sys.exit('Train file', config_json, 'NOT FOUND!')
+    with open(config_json) as f:
+        config = munchify(yaml.safe_load(f))
+    # TODO: Check if all required params are there, and create folders
+    return config
 
 def main(config):
     try:
@@ -36,15 +44,11 @@ def main(config):
                      drop_last=True, pin_memory=True, shuffle=False)
         
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = get_model(config.model, train_data, device)
+    model = get_model(config.model, train_data)
     
     trainer_loop(model, config, train_dataloader, test_dataloader, device)
     
 
 if __name__ == '__main__':
-    config_json = sys.argv[1]
-    if not os.path.isfile(config_json):
-        sys.exit('Train file', config_json, 'NOT FOUND!')
-    with open(config_json) as f:
-        config = munchify(yaml.safe_load(f))
+    config = load_and_validate_cfg(sys.argv[1])
     main(config)

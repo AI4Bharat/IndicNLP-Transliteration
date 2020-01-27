@@ -12,7 +12,8 @@
         
         infer_batch_size:   64,
         
-        loss_file:          hypotheses/loss.txt,
+        loss_file:          hypotheses/train_loss.txt,
+        score_file:         hypotheses/scores.txt,
         ckpt_dir:           hypotheses
     },
 
