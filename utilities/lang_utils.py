@@ -16,6 +16,8 @@ lang2code = {
     'hindi': 'hi'
 }
 
+code2lang = {code: lang for lang, code in lang2code.items()}
+
 def get_lang_chars(lang, allow_numbers=False):
     script = lang2script[lang2code[lang]]
     chars = unicode_map[script]

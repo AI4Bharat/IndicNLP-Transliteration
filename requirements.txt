@@ -4,3 +4,4 @@ torch
 torchvision
 tqdm
 munch
+flask
