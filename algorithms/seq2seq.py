@@ -10,13 +10,14 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class Encoder(nn.Module):
-    def __init__(self, rnn_type, vocab_size, enc_units, embedding_dim):
+    def __init__(self, rnn_type, vocab_size, enc_units, embedding_dim, bidirectional):
         super(Encoder, self).__init__()
         self.enc_units = enc_units
         self.vocab_size = vocab_size
+        self.num_directions = 2 if bidirectional else 1
         self.inp2emb = nn.Linear(self.vocab_size, embedding_dim)
         self.RNN = rnn_type
-        self.gru = self.RNN(embedding_dim, self.enc_units)
+        self.gru = self.RNN(embedding_dim, self.enc_units//self.num_directions, bidirectional=bidirectional)
         
     def forward(self, x, lens):
         # x: batch_size, max_length, vocab_size
@@ -118,8 +119,8 @@ class EncoderDecoder(nn.Module):
         else:
             print(rnn_type, ' rnn_type is not available; using GRU by default')
             rnn_type = nn.GRU
-        self.encoder = Encoder(rnn_type, len(input_vocab), model_cfg.enc_hidden_units, model_cfg.enc_embed_size)
-        self.decoder = Decoder(rnn_type, len(output_vocab), model_cfg.dec_hidden_units, model_cfg.enc_hidden_units, model_cfg.dec_embed_size)
+        self.encoder = Encoder(rnn_type, len(input_vocab), model_cfg.hidden_units, model_cfg.enc_embed_size, model_cfg.bidirectional)
+        self.decoder = Decoder(rnn_type, len(output_vocab), model_cfg.hidden_units, model_cfg.hidden_units, model_cfg.dec_embed_size)
         self.start_code, self.end_code = input_vocab['$'], input_vocab['#']
         self.output_vocab_size = len(output_vocab)
         self.MAX_DECODE_STEPS = model_cfg.max_decode_steps
@@ -152,5 +153,7 @@ class EncoderDecoder(nn.Module):
     def forward(self, x, x_len, y_ohe=None, teacher_force=False):
         # Run encoder
         enc_output, enc_hidden = self.encoder(x.float(), x_len)
+        if self.encoder.num_directions > 1:
+            enc_hidden = enc_hidden.permute(1, 0, 2).reshape(-1, 1, self.encoder.enc_units).permute(1, 0, 2)
         # Run decoder step-by-step
         return self.decode(enc_hidden, enc_output, y_ohe, teacher_force)

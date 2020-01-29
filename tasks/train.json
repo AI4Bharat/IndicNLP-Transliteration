@@ -14,8 +14,8 @@
         teacher_force_prob: 0.5,
         
         # Directories and transfer learning
-        ckpt_dir:           hypotheses,
-        load_ckpt_epoch:    50,
+        ckpt_dir:           hypotheses/bidir/,
+        # load_ckpt_epoch:    50,
         
         # Inference parameters
         infer_batch_size:   64,
@@ -25,16 +25,17 @@
     model: {
         type:               seq2seq,
         rnn_type:           gru,
+        hidden_units:       256,
         
         # Encoder parameters
-        enc_hidden_units:   256,
         enc_embed_size:     64,
+        bidirectional:      true,
         
         # Decoder parameters
-        dec_hidden_units:   256,
         dec_embed_size:     128,
-        
         max_decode_steps:   25,
+        
+        
     },
     
 }
