@@ -10,16 +10,18 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class Encoder(nn.Module):
-    def __init__(self, vocab_size, enc_units):
+    def __init__(self, rnn_type, vocab_size, enc_units, embedding_dim):
         super(Encoder, self).__init__()
         self.enc_units = enc_units
         self.vocab_size = vocab_size
-        self.gru = nn.GRU(self.vocab_size, self.enc_units)
+        self.inp2emb = nn.Linear(self.vocab_size, embedding_dim)
+        self.RNN = rnn_type
+        self.gru = self.RNN(embedding_dim, self.enc_units)
         
     def forward(self, x, lens):
         # x: batch_size, max_length, vocab_size
-                
-        # x transformed = max_len X batch_size X vocab_size
+        x = self.inp2emb(x)
+        # x transformed = max_len X batch_size X embedding_dim
         x = pack_padded_sequence(x, lens) # unpad
         
         # output: max_length, batch_size, enc_units
@@ -32,17 +34,24 @@ class Encoder(nn.Module):
         return output, self.hidden
 
 class Decoder(nn.Module):
-    def __init__(self, vocab_size, dec_units, enc_units, embedding_dim):
+    def __init__(self, rnn_type, vocab_size, dec_units, enc_units, embedding_dim):
         super(Decoder, self).__init__()
         self.dec_units = dec_units
         self.enc_units = enc_units
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
-        self.out2hidden = nn.Linear(self.vocab_size, self.embedding_dim)
-        self.gru = nn.GRU(self.embedding_dim + self.enc_units, 
+        # FC to convert vocab_size to a size to concat with hidden
+        self.out2emb = nn.Linear(self.vocab_size, self.embedding_dim)
+        self.RNN = rnn_type
+        self.gru = self.RNN(self.embedding_dim + self.enc_units, 
                           self.dec_units,
                           batch_first=True)
-        self.fc = nn.Linear(self.dec_units, self.vocab_size)
+        
+        # DecoderRNN -> FC1(emb_size) -> FC2(vocab_size)
+        self.fc = nn.Sequential(
+            nn.Linear(self.dec_units, self.embedding_dim),
+            nn.Tanh(),
+            nn.Linear(self.embedding_dim, self.vocab_size))
         
         # used for attention
         self.W1 = nn.Linear(self.enc_units, self.dec_units)
@@ -78,7 +87,7 @@ class Decoder(nn.Module):
         
         # x shape after passing through embedding == (batch_size, 1, embedding_dim)
         # takes case of the right portion of the model above (illustrated in red)
-        x = self.out2hidden(x)
+        x = self.out2emb(x)
         
         # x shape after concatenation == (batch_size, 1, embedding_dim + hidden_size)
         #x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
@@ -99,13 +108,21 @@ class Decoder(nn.Module):
         return x, state, attention_weights
 
 class EncoderDecoder(nn.Module):
-    def __init__(self, units, input_vocab, output_vocab, embedding_dim):
+    def __init__(self, model_cfg, input_vocab, output_vocab):
         super(EncoderDecoder, self).__init__()
-        self.encoder = Encoder(len(input_vocab), units)
-        self.decoder = Decoder(len(output_vocab), units, units, embedding_dim)
+        rnn_type = model_cfg.rnn_type.lower()
+        if rnn_type == 'gru':
+            rnn_type = nn.GRU
+        elif rnn_type == 'rnn':
+            rnn_type = nn.RNN
+        else:
+            print(rnn_type, ' rnn_type is not available; using GRU by default')
+            rnn_type = nn.GRU
+        self.encoder = Encoder(rnn_type, len(input_vocab), model_cfg.enc_hidden_units, model_cfg.enc_embed_size)
+        self.decoder = Decoder(rnn_type, len(output_vocab), model_cfg.dec_hidden_units, model_cfg.enc_hidden_units, model_cfg.dec_embed_size)
         self.start_code, self.end_code = input_vocab['$'], input_vocab['#']
         self.output_vocab_size = len(output_vocab)
-        self.MAX_DECODE_STEPS = 25
+        self.MAX_DECODE_STEPS = model_cfg.max_decode_steps
     
     def decode(self, dec_hidden, enc_output, y_ohe=None, teacher_force=False):
         outputs = []

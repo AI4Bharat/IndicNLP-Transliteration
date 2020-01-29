@@ -10,7 +10,7 @@ from algorithms.model_manager import Xlit_ModelMgr
 def get_model(model_cfg, data):
     if model_cfg.type == 'seq2seq':
         from algorithms.seq2seq import EncoderDecoder
-        model = EncoderDecoder(model_cfg.hidden_units, data.eng_alpha2index, data.lang_alpha2index, model_cfg.hidden_units)
+        model = EncoderDecoder(model_cfg, data.eng_alpha2index, data.lang_alpha2index)
     else:
         sys.exit(model_cfg.type, 'NOT SUPPORTED')
     return model
