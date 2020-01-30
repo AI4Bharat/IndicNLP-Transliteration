@@ -10,14 +10,15 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class Encoder(nn.Module):
-    def __init__(self, rnn_type, vocab_size, enc_units, embedding_dim, bidirectional):
+    def __init__(self, RNN_type, vocab_size, enc_units, embedding_dim,
+                 bidirectional=False, num_layers=1):
         super(Encoder, self).__init__()
         self.enc_units = enc_units
         self.vocab_size = vocab_size
         self.num_directions = 2 if bidirectional else 1
         self.inp2emb = nn.Linear(self.vocab_size, embedding_dim)
-        self.RNN = rnn_type
-        self.gru = self.RNN(embedding_dim, self.enc_units//self.num_directions, bidirectional=bidirectional)
+        self.rnn = RNN_type(embedding_dim, self.enc_units//self.num_directions,
+                            bidirectional=bidirectional, num_layers=num_layers)
         
     def forward(self, x, lens):
         # x: batch_size, max_length, vocab_size
@@ -27,7 +28,7 @@ class Encoder(nn.Module):
         
         # output: max_length, batch_size, enc_units
         # self.hidden: 1, batch_size, enc_units
-        output, self.hidden = self.gru(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        output, self.hidden = self.rnn(x) # returns hidden state of all timesteps as well as hidden state at last timestep
         
         # pad the sequence to the max length in the batch
         output, _ = pad_packed_sequence(output)
@@ -35,7 +36,8 @@ class Encoder(nn.Module):
         return output, self.hidden
 
 class Decoder(nn.Module):
-    def __init__(self, rnn_type, vocab_size, dec_units, enc_units, embedding_dim):
+    def __init__(self, RNN_type, vocab_size, dec_units, enc_units, embedding_dim,
+                num_layers=1):
         super(Decoder, self).__init__()
         self.dec_units = dec_units
         self.enc_units = enc_units
@@ -43,9 +45,8 @@ class Decoder(nn.Module):
         self.embedding_dim = embedding_dim
         # FC to convert vocab_size to a size to concat with hidden
         self.out2emb = nn.Linear(self.vocab_size, self.embedding_dim)
-        self.RNN = rnn_type
-        self.gru = self.RNN(self.embedding_dim + self.enc_units, 
-                          self.dec_units,
+        self.rnn = RNN_type(self.embedding_dim + self.enc_units, 
+                          self.dec_units, num_layers=num_layers,
                           batch_first=True)
         
         # DecoderRNN -> FC1(emb_size) -> FC2(vocab_size)
@@ -60,16 +61,10 @@ class Decoder(nn.Module):
         self.V = nn.Linear(self.enc_units, 1)
     
     def forward(self, x, hidden, enc_output):
-        # enc_output original: (max_length, batch_size, enc_units)
-        # enc_output converted == (batch_size, max_length, hidden_size)
-        enc_output = enc_output.permute(1,0,2)
-        # hidden shape == (batch_size, hidden size)
+        # hidden shape == (1, batch_size, hidden size)
         # hidden_with_time_axis shape == (batch_size, 1, hidden size)
         # we are doing this to perform addition to calculate the score
-        
-        # hidden shape == (batch_size, hidden size)
-        # hidden_with_time_axis shape == (batch_size, 1, hidden size)
-        hidden_with_time_axis = hidden.permute(1, 0, 2)
+        hidden_with_time_axis = hidden[-1::1].permute(1, 0, 2) # Take only the last layer's hidden
         
         # score: (batch_size, max_length, hidden_size) # Bahdanaus's
         # we get 1 at the last axis because we are applying tanh(FC(EO) + FC(H)) to self.V
@@ -97,7 +92,7 @@ class Decoder(nn.Module):
         
         # passing the concatenated vector to the GRU
         # output: (batch_size, 1, hidden_size)
-        output, state = self.gru(x.float(), hidden.float())
+        output, state = self.rnn(x.float(), hidden.float())
         
         
         # output shape == (batch_size * 1, hidden_size)
@@ -119,11 +114,17 @@ class EncoderDecoder(nn.Module):
         else:
             print(rnn_type, ' rnn_type is not available; using GRU by default')
             rnn_type = nn.GRU
-        self.encoder = Encoder(rnn_type, len(input_vocab), model_cfg.hidden_units, model_cfg.enc_embed_size, model_cfg.bidirectional)
-        self.decoder = Decoder(rnn_type, len(output_vocab), model_cfg.hidden_units, model_cfg.hidden_units, model_cfg.dec_embed_size)
+        
+        enc_cfg = model_cfg.encoder
+        self.encoder = Encoder(rnn_type, len(input_vocab), enc_cfg.hidden_units,
+                               enc_cfg.embed_size, enc_cfg.bidirectional, enc_cfg.num_layers)
+        
+        dec_cfg = model_cfg.decoder
+        self.decoder = Decoder(rnn_type, len(output_vocab), dec_cfg.hidden_units,
+                               enc_cfg.hidden_units, dec_cfg.embed_size, dec_cfg.num_layers)
         self.start_code, self.end_code = input_vocab['$'], input_vocab['#']
         self.output_vocab_size = len(output_vocab)
-        self.MAX_DECODE_STEPS = model_cfg.max_decode_steps
+        self.MAX_DECODE_STEPS = dec_cfg.max_steps
     
     def decode(self, dec_hidden, enc_output, y_ohe=None, teacher_force=False):
         outputs = []
@@ -136,7 +137,7 @@ class EncoderDecoder(nn.Module):
                 # use teacher forcing - feeding the target as the next input (via dec_input)
                 dec_input = y_ohe[:, t].unsqueeze(1)
         else:
-            dec_input = torch.zeros(enc_output.shape[1], 1, self.output_vocab_size).to(enc_output.device) #(batch_size, 1, out_size)
+            dec_input = torch.zeros(enc_output.shape[0], 1, self.output_vocab_size).to(enc_output.device) #(batch_size, 1, out_size)
             dec_input[:, 0, self.start_code] = 1
             outputs.append(dec_input.squeeze(1))
             
@@ -153,7 +154,16 @@ class EncoderDecoder(nn.Module):
     def forward(self, x, x_len, y_ohe=None, teacher_force=False):
         # Run encoder
         enc_output, enc_hidden = self.encoder(x.float(), x_len)
+        # enc_output original: (max_length, batch_size, enc_units)
+        # enc_output converted == (batch_size, max_length, hidden_size)
+        enc_output = enc_output.permute(1,0,2) # since batch_first=True
         if self.encoder.num_directions > 1:
-            enc_hidden = enc_hidden.permute(1, 0, 2).reshape(-1, 1, self.encoder.enc_units).permute(1, 0, 2)
+            enc_hidden = enc_hidden.permute(1, 0, 2) \
+                .reshape(-1, self.encoder.rnn.num_layers, self.encoder.enc_units) \
+                .permute(1, 0, 2).contiguous()
         # Run decoder step-by-step
-        return self.decode(enc_hidden, enc_output, y_ohe, teacher_force)
+        dec_hidden = None
+        if self.encoder.enc_units == self.decoder.dec_units and \
+            self.encoder.rnn.num_layers == self.decoder.rnn.num_layers:
+            dec_hidden = enc_hidden
+        return self.decode(dec_hidden, enc_output, y_ohe, teacher_force)
