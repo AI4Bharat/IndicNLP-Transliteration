@@ -3,105 +3,13 @@ Deep Learning based Encoder-Decoder models.
 
 Seq2Seq with Attention inspired from:
 https://medium.com/dair-ai/neural-machine-translation-with-attention-using-pytorch-a66523f1669f
+https://tsdaemon.github.io/2018/07/08/nmt-with-pytorch-encoder-decoder.html
 """
 
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-
-class Encoder(nn.Module):
-    def __init__(self, RNN_type, vocab_size, enc_units, embedding_dim,
-                 bidirectional=False, num_layers=1):
-        super(Encoder, self).__init__()
-        self.enc_units = enc_units
-        self.vocab_size = vocab_size
-        self.num_directions = 2 if bidirectional else 1
-        self.inp2emb = nn.Linear(self.vocab_size, embedding_dim)
-        self.rnn = RNN_type(embedding_dim, self.enc_units//self.num_directions,
-                            bidirectional=bidirectional, num_layers=num_layers)
-        
-    def forward(self, x, lens):
-        # x: batch_size, max_length, vocab_size
-        x = self.inp2emb(x)
-        # x transformed = max_len X batch_size X embedding_dim
-        x = pack_padded_sequence(x, lens) # unpad
-        
-        # output: max_length, batch_size, enc_units
-        # self.hidden: 1, batch_size, enc_units
-        output, self.hidden = self.rnn(x) # returns hidden state of all timesteps as well as hidden state at last timestep
-        
-        # pad the sequence to the max length in the batch
-        output, _ = pad_packed_sequence(output)
-        
-        return output, self.hidden
-
-class Decoder(nn.Module):
-    def __init__(self, RNN_type, vocab_size, dec_units, enc_units, embedding_dim,
-                num_layers=1):
-        super(Decoder, self).__init__()
-        self.dec_units = dec_units
-        self.enc_units = enc_units
-        self.vocab_size = vocab_size
-        self.embedding_dim = embedding_dim
-        # FC to convert vocab_size to a size to concat with hidden
-        self.out2emb = nn.Linear(self.vocab_size, self.embedding_dim)
-        self.rnn = RNN_type(self.embedding_dim + self.enc_units, 
-                          self.dec_units, num_layers=num_layers,
-                          batch_first=True)
-        
-        # DecoderRNN -> FC1(emb_size) -> FC2(vocab_size)
-        self.fc = nn.Sequential(
-            nn.Linear(self.dec_units, self.embedding_dim),
-            nn.Tanh(),
-            nn.Linear(self.embedding_dim, self.vocab_size))
-        
-        # used for attention
-        self.W1 = nn.Linear(self.enc_units, self.dec_units)
-        self.W2 = nn.Linear(self.enc_units, self.dec_units)
-        self.V = nn.Linear(self.enc_units, 1)
-    
-    def forward(self, x, hidden, enc_output):
-        # hidden shape == (1, batch_size, hidden size)
-        # hidden_with_time_axis shape == (batch_size, 1, hidden size)
-        # we are doing this to perform addition to calculate the score
-        hidden_with_time_axis = hidden[-1::1].permute(1, 0, 2) # Take only the last layer's hidden
-        
-        # score: (batch_size, max_length, hidden_size) # Bahdanaus's
-        # we get 1 at the last axis because we are applying tanh(FC(EO) + FC(H)) to self.V
-        # It doesn't matter which FC we pick for each of the inputs
-        score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
-        
-        #score = torch.tanh(self.W2(hidden_with_time_axis) + self.W1(enc_output))
-          
-        # attention_weights shape == (batch_size, max_length, 1)
-        # we get 1 at the last axis because we are applying score to self.V
-        attention_weights = torch.softmax(self.V(score), dim=1)
-        
-        # context_vector shape after sum == (batch_size, hidden_size)
-        context_vector = attention_weights * enc_output
-        context_vector = torch.sum(context_vector, dim=1)
-        
-        # x shape after passing through embedding == (batch_size, 1, embedding_dim)
-        # takes case of the right portion of the model above (illustrated in red)
-        x = self.out2emb(x)
-        
-        # x shape after concatenation == (batch_size, 1, embedding_dim + hidden_size)
-        #x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
-        # ? Looks like attention vector in diagram of source
-        x = torch.cat((context_vector.unsqueeze(1), x), -1)
-        
-        # passing the concatenated vector to the GRU
-        # output: (batch_size, 1, hidden_size)
-        output, state = self.rnn(x.float(), hidden.float())
-        
-        
-        # output shape == (batch_size * 1, hidden_size)
-        output =  output.view(-1, output.size(2))
-        
-        # output shape == (batch_size * 1, vocab)
-        x = self.fc(output)
-        
-        return x, state, attention_weights
+from algorithms.encoder import Encoder
+from algorithms.decoder import Decoder
 
 class EncoderDecoder(nn.Module):
     def __init__(self, model_cfg, input_vocab, output_vocab):
@@ -128,6 +36,10 @@ class EncoderDecoder(nn.Module):
     
     def decode(self, dec_hidden, enc_output, y_ohe=None, teacher_force=False):
         outputs = []
+        if dec_hidden is None:
+            # hidden_shape: (num_layers,batch,hidden_size)
+            dec_hidden = torch.zeros((self.decoder.rnn.num_layers, enc_output.shape[0], self.decoder.dec_units)).to(enc_output.device)
+        
         if teacher_force and y_ohe is not None:
             dec_input = y_ohe[:, 0].unsqueeze(1)
             outputs.append(y_ohe[:, 0])
@@ -152,15 +64,28 @@ class EncoderDecoder(nn.Module):
         return outputs
     
     def forward(self, x, x_len, y_ohe=None, teacher_force=False):
+        '''
+        Arguments:
+            x:        Input in OHE (batch_sz, max_len, in_vocab_sz)
+            x_len:    Actual lengths of each sequence (batch_size)
+            y_ohe:    Outputs in OHE (batch_sz, max_out_len, out_vocab_sz)
+        
+        Returns:
+            outputs:  Seq/Array of outputs of shape (batch_sz, out_vocab_sz)
+        '''
         # Run encoder
         enc_output, enc_hidden = self.encoder(x.float(), x_len)
         # enc_output original: (max_length, batch_size, enc_units)
         # enc_output converted == (batch_size, max_length, hidden_size)
         enc_output = enc_output.permute(1,0,2) # since batch_first=True
+        
+        # TODO: What if I don't pass the last hidden state itself? (since we're having attention)
+        # Convert (num_layers*num_directions,batch,hidden_size) to (num_layers,batch,hidden_size*num_directions)
         if self.encoder.num_directions > 1:
             enc_hidden = enc_hidden.permute(1, 0, 2) \
                 .reshape(-1, self.encoder.rnn.num_layers, self.encoder.enc_units) \
                 .permute(1, 0, 2).contiguous()
+        
         # Run decoder step-by-step
         dec_hidden = None
         if self.encoder.enc_units == self.decoder.dec_units and \
