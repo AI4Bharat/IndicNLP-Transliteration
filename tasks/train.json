@@ -12,6 +12,7 @@
         epochs:             120,
         teacher_epochs:     80,
         teacher_force_prob: 0.5,
+        early_stop_after:   15,
         
         # Directories and transfer learning
         ckpt_dir:           hypotheses/2E3D-bidir/,

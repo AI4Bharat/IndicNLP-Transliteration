@@ -1,10 +1,13 @@
 import torch, json, time, os, random
+from shutil import copyfile
+from tqdm import tqdm
+
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm
+
 from utilities.dataloader import sort_tensorbatch
 from utilities.accuracy_news import evaluate
-from utilities.constants import get_train_files
+from utilities.constants import get_train_files, BEST_MODEL_FILE
 
 class Xlit_ModelMgr(nn.Module):
     def __init__(self, model, input_vocab, output_vocab, device='cpu'):
@@ -80,18 +83,21 @@ class Xlit_ModelMgr(nn.Module):
         # Teacher-forcing based on a probability (only till some epochs)
         teacher_train_epochs = hparams.teacher_epochs if 'teacher_epochs' in hparams else 0
         teacher_force_ratio = hparams.teacher_force_prob if 'teacher_force_prob' in hparams else 1.0
+        early_stop_after = hparams.early_stop_after if 'early_stop_after' in hparams else 10
+        early_stop_counter, best_epoch, best_score = 0, -1, 0.0
         
         with open(loss_file, 'w') as f:
             pass # Create/clear file
         with open(score_file, 'w') as f:
             f.write('ACCURACY,MEAN_F\n') # Write Header
         
+        # Training loop (epochs)
         for epoch in range(1, num_epochs+1):
             teacher_force = epoch <= teacher_train_epochs and random.random() < teacher_force_ratio
             epoch_losses, time_taken = self.train_epoch(dataloader, epoch, teacher_force, loss_file)
             total_loss = sum(epoch_losses)
                     
-            print('END OF EPOCH {} -- AvgLoss {:.4f} -- TIME {:.3f}'.format(
+            print('END OF EPOCH {} -- AvgLoss {:.5f} -- TIME {:.3f}'.format(
                 epoch, total_loss/len(dataloader), time_taken))
             
             # Write checkpoint and test scores
@@ -102,11 +108,26 @@ class Xlit_ModelMgr(nn.Module):
                 print('Accuracy, Mean_F: ', scores_csv)
                 with open(score_file, 'a') as f:
                     f.write(scores_csv)
-            
+                
+                # Record best model and check for early-stopping
+                if scores['accuracy'] > best_score:
+                    best_score = scores['accuracy']
+                    best_epoch = epoch
+                    early_stop_counter = 0
+                else:
+                    early_stop_counter += 1
+                    if early_stop_counter >= early_stop_after:
+                        print('Early stopping the training since no change in test_score since %d epochs.' % early_stop_after)
+                        break
         
         # End of training
+        if test_dataloader:
+            print('Best Accuracy: %f\t Best Epoch: %d' % (best_score, best_epoch))
+            best_model_file = os.path.join(ckpt_dir, BEST_MODEL_FILE)
+            copyfile(model_file % best_epoch, best_model_file)
         return
     
+    # Calculates and returns scores
     def validate_test(self, dataloader):
         self.model.eval()
         pred_data = {}
