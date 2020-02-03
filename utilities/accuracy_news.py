@@ -4,10 +4,10 @@ given the predictions and ground truth as JSONs.
 
 USAGE:
     Example 1: Predictions file format - JSON
-    <<script.py>> --ground-truth-json EnHi_dev.json --prediction-ftype json --predictions-json Google/EnHi_dev.json [--save-output-csv scores.csv]
+    <<script.py>> --gt-json EnHi_dev.json --pred-json Google/EnHi_dev.json [--save-output-csv scores.csv]
     
     Example 2: Predictions file format - txt
-    <<script.py>> --ground-truth-json EnHi_dev.json --prediction-ftype txt --input-txt EnHi_dev.en --output-txt Moses_out.hi [--save-output-csv scores.csv]
+    <<script.py>> --gt-json EnHi_dev.json --in EnHi_dev.en --out Moses_out.hi [--save-output-csv scores.csv]
 
 Taken from: https://github.com/snukky/news-translit-nmt/blob/master/tools/news_evaluation.py
 """
@@ -46,17 +46,18 @@ def f_score(candidate, references):
             best_ref = ref
             best_ref_lcs = lcs
     
-    #try:
-    precision = float(best_ref_lcs)/float(len(candidate))
-    recall = float(best_ref_lcs)/float(len(best_ref))
-    #except:
+    try:
+        precision = float(best_ref_lcs)/float(len(candidate))
+        recall = float(best_ref_lcs)/float(len(best_ref))
+    except:
+        return 0.0, best_ref
     #    import ipdb
     #    ipdb.set_trace()
     
     if best_ref_lcs:
         return 2*precision*recall/(precision+recall), best_ref
     else:
-        return 0.0, best_ref  
+        return 0.0, best_ref
     
 def mean_average_precision(candidates, references, n):
     '''
@@ -151,8 +152,8 @@ def write_details(output_fname, input_data, test_data, acc, f, f_best_match, mrr
     
     f_out.close()
 
-def read_data(gt_json, file_type, args):
-    
+def read_data(gt_json, args):
+    file_type = 'json' if args.pred_json else 'txt'
     # Check if files exist
     if not os.path.isfile(gt_json):
         sys.exit('ERROR:', gt_json, 'Not Found')
@@ -162,7 +163,7 @@ def read_data(gt_json, file_type, args):
     
     # Read Predictions based on file_type
     if file_type.lower() == 'json':
-        pred_json = args.predictions_json
+        pred_json = args.pred_json
         if not os.path.isfile(pred_json):
             sys.exit('ERROR:', pred_json, 'Not Found')
 
@@ -174,8 +175,8 @@ def read_data(gt_json, file_type, args):
     
     elif file_type.lower() == 'txt':
         # Read predictions from 2 parallel txt files
-        infile = args.input_txt
-        outfile = args.output_txt
+        infile = args.inp
+        outfile = args.out
         if not os.path.isfile(infile):
             sys.exit('ERROR:', infile, 'Not Found')
         if not os.path.isfile(outfile):
@@ -200,9 +201,9 @@ def read_data(gt_json, file_type, args):
                 pred_data[inp] = []
             pred_data[inp].append(out)
             
-        if args.predictions_json:
+        if args.save_json:
             # Save as JSON for future reference
-            with open(args.predictions_json, 'w', encoding='utf8') as f:
+            with open(args.save_json, 'w', encoding='utf8') as f:
                 json.dump(pred_data, f, ensure_ascii=False, indent=4, sort_keys=True)
         
         return gt_data, pred_data
@@ -211,7 +212,7 @@ def read_data(gt_json, file_type, args):
         sys.exit('ERROR: Unrecognized predictions file format:', file_type)
 
 def print_scores(args):
-    gt_data, pred_data = read_data(args.ground_truth_json, args.prediction_ftype, args)
+    gt_data, pred_data = read_data(args.gt_json, args)
 
     acc, f, f_best_match, mrr, map_ref = evaluate(pred_data, gt_data)
 
@@ -230,10 +231,9 @@ def print_scores(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ground-truth-json', type=str, required=True)
-    parser.add_argument('--predictions-json', type=str)
-    parser.add_argument('--prediction-ftype', type=str, required=True)
-    parser.add_argument('--input-txt', type=str)
-    parser.add_argument('--output-txt', type=str)
+    parser.add_argument('--gt-json', type=str, required=True)
+    parser.add_argument('--pred-json', type=str)
+    parser.add_argument('--inp', type=str)
+    parser.add_argument('--out', type=str)
     parser.add_argument('--save-output-csv', type=str)
     print_scores(parser.parse_args())
