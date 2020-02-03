@@ -66,7 +66,7 @@ class EncoderDecoder(nn.Module):
     def forward(self, x, x_len, y_ohe=None, teacher_force=False):
         '''
         Arguments:
-            x:        Input in OHE (batch_sz, max_len, in_vocab_sz)
+            x:        Input in OHE (max_len, batch_sz, in_vocab_sz)
             x_len:    Actual lengths of each sequence (batch_size)
             y_ohe:    Outputs in OHE (batch_sz, max_out_len, out_vocab_sz)
         

@@ -15,11 +15,11 @@ class Encoder(nn.Module):
     def forward(self, x, lens):
         '''
         Arguments:
-            x:      Padded input (batch_size, max_length, vocab_size)
-            lens:   Actual lengths of each sequence (batch_size)
+            x:      Padded input (max_len, batch_sz, vocab_size)
+            lens:   Actual lengths of each sequence (batch_sz)
         Returns:
-            output: RNN's output (max_length, batch_size, enc_units)
-            hidden: RNN's hidden (num_layers*num_directions, batch_size, enc_units/num_directions)
+            output: RNN's output (max_len, batch_sz, enc_units)
+            hidden: RNN's hidden (num_layers*num_directions, batch_sz, enc_units/num_directions)
         '''
         
         x = self.inp2emb(x)

@@ -76,6 +76,6 @@ class Decoder(nn.Module):
         out, state = self.rnn(x.float(), hidden.float())
         
         # output shape == (batch_size, vocab)
-        out = self.fc(out.squeeze())
+        out = self.fc(out.squeeze(1))
         
         return out, state, attention_weights
