@@ -18,6 +18,8 @@ MODELS_PATH = 'hypotheses/api'
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
+            '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
 engine = None
 
@@ -81,4 +83,4 @@ def varnam_xlit(lang_code, eng_word):
 
 if __name__ == '__main__': 
     engine = InferenceManager(MODELS_PATH)
-    app.run(debug = True, host='0.0.0.0', port=80) 
+    app.run(debug=True, host='0.0.0.0', port=443, ssl_context=SSL_FILES) 
