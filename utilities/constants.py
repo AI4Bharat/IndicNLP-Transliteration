@@ -5,6 +5,7 @@ LOSS_FILE = 'train_loss.txt'
 SCORES_FILE = 'scores.txt'
 MODEL_FILE = 'model-e%03d.pt'
 BEST_MODEL_FILE = 'model-best.pt'
+DEFAULT_CONFIG = 'config.json'
 
 def get_train_files(ckpt_folder):
     if not os.path.isdir(ckpt_folder):

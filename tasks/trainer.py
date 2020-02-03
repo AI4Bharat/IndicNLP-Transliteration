@@ -1,11 +1,11 @@
 from torch.utils.data import DataLoader
-from munch import munchify
 import os, sys, yaml, torch
 sys.path.append('.')
 
 from utilities.dataloader import Transliteration_Dataset, sort_tensorbatch
 from utilities.lang_utils import get_lang_chars
 from algorithms.model_manager import Xlit_ModelMgr
+from utilities.config import load_and_validate_cfg
 
 def get_model(model_cfg, data):
     if model_cfg.type == 'seq2seq':
@@ -18,14 +18,6 @@ def get_model(model_cfg, data):
 def trainer_loop(model, config, train_dataloader, test_dataloader=None, device='cpu'):
     model_mgr = Xlit_ModelMgr(model, train_dataloader.dataset.eng_alpha2index, train_dataloader.dataset.lang_alpha2index, device)
     model_mgr.trainer(config.hyperparams, train_dataloader, test_dataloader)
-
-def load_and_validate_cfg(config_json):
-    if not os.path.isfile(config_json):
-        sys.exit('Train file', config_json, 'NOT FOUND!')
-    with open(config_json) as f:
-        config = munchify(yaml.safe_load(f))
-    # TODO: Check if all required params are there, and create folders
-    return config
 
 def main(config):
     try:
@@ -41,7 +33,7 @@ def main(config):
     if os.path.isfile(config.test_data_json):
         test_data = Transliteration_Dataset(config.test_data_json, lang_alphabets)
         test_dataloader = DataLoader(test_data, batch_size=config.hyperparams.infer_batch_size, 
-                     drop_last=True, pin_memory=True, shuffle=False)
+                     pin_memory=True, shuffle=False)
         
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = get_model(config.model, train_data)
