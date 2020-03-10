@@ -16,19 +16,20 @@ def clean_eng(s):
     return s
 
 ### sort batch function to be able to use with pad_packed_sequence
-def sort_tensorbatch(X, X_lens, Y, Y_, device='cpu'):
+def sort_tensorbatch(X, X_lens, Y, Y_, indices, device='cpu'):
     X_lens, indx = X_lens.sort(dim=0, descending=True)
     X = X[indx]
     Y = Y[indx]
     Y_ = Y_[indx]
-    return X.transpose(0,1).to(device), X_lens.to(device), Y.to(device), Y_.to(device) # transpose (batch x seq) to (seq x batch)
+    indices = indices[indx]
+    return X.transpose(0,1).to(device), X_lens.to(device), Y.to(device), Y_.to(device), indices # transpose (batch x seq) to (seq x batch)
 
 class Transliteration_Dataset(TensorDataset):
     # A dataset for Eng-to-<lang> transliterations
     def __init__(self, json_file, lang_alphabets, sort_for_pad=True):
         with open(json_file, encoding='utf-8') as f:
-            data = json.load(f)
-        self.eng_words, self.lang_words = self.process_json(data, lang_alphabets)
+            self.data = json.load(f)
+        self.eng_words, self.lang_words = self.process_json(self.data, lang_alphabets)
         self.start_char, self.end_char, self.pad_char = '$', '#', '*'
         self.eng_vectors, self.eng_vec_lens = self.process_eng(self.eng_words)
         self.lang_vectors, self.lang_vec_lens = self.process_lang(self.lang_words, lang_alphabets)
@@ -40,7 +41,7 @@ class Transliteration_Dataset(TensorDataset):
         
     def __getitem__(self, index):
         # Returns eng_OHE, actual_len(eng_OHE), lang_OHE, lang_indices
-        return self.eng_ohe_data[index], self.eng_vec_lens[index], self.lang_ohe_data[index], self.padded_lang_vectors[index]
+        return self.eng_ohe_data[index], self.eng_vec_lens[index], self.lang_ohe_data[index], self.padded_lang_vectors[index], index
     
     def __len__(self):
         return len(self.eng_ohe_data)
