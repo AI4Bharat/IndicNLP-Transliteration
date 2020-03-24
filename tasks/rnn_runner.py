@@ -48,15 +48,15 @@ input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
 enc_emb_dim = 256
 dec_emb_dim = 256
-hid_dim = 512
+hidden_dim = 512
 n_layers = 1
 m_dropout = 0
 
-enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
-                enc_hid_dim= hid_dim,
+enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
+                hidden_dim= hidden_dim,
                 enc_layers= n_layers, enc_dropout= m_dropout)
-dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
-                dec_hid_dim= hid_dim, enc_hid_dim= hid_dim,
+dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
+                hidden_dim= hidden_dim,
                 dec_layers= n_layers, dec_dropout= m_dropout)
 
 model = Seq2Seq(enc, dec).to(device)
@@ -100,7 +100,7 @@ if __name__ =="__main__":
 
             #--- forward
             output = model(src, tgt, src_sz, tgt_sz)
-
+            print("Out shape", output.shape)
             loss = loss_estimator(output, tgt) / acc_batch
             acc_loss += loss
 

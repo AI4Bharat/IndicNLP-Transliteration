@@ -1,6 +1,8 @@
 .vscode
 data/*
 hypotheses/*
+logs
+*.log
 
 !README.md
 !readme.md
