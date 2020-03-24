@@ -1,8 +1,8 @@
 from torch.utils.data import Dataset
 import numpy as np
 
+NP_TYPE = np.int64
 ##====== Unicodes ==============================================================
-
 
 indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
 english_smallcase = [chr(alpha) for alpha in range(97, 123)]
@@ -21,6 +21,7 @@ class GlyphStrawboss():
         elif lang in ['hi']:
             self.glyphs = devanagari_scripts + indoarab_numeric
 
+        self.glyph_size = len(self.glyphs)
         self.char2idx = {}
         self.idx2char = {}
         self._create_index()
@@ -39,13 +40,20 @@ class GlyphStrawboss():
         for char, idx in self.char2idx.items():
             self.idx2char[idx] = char
 
+    def size(self):
+        return self.glyph_size
+
+
     def word2xlitvec(self, word):
         """ Converts given string of gyphs(word) to vector(numpy)
+        Also adds tokens for start and end
         """
-        vec = []
+        vec = [self.char2idx['$']] #start token
         for i in list(word):
             vec.append(self.char2idx[i])
-        vec = np.asarray(vec)
+        vec.append(self.char2idx['#']) #end token
+
+        vec = np.asarray(vec, dtype=NP_TYPE)
         return vec
 
     def xlitvec2word(self, vector):
@@ -54,7 +62,8 @@ class GlyphStrawboss():
         char_list = []
         for i in vector:
             char_list.append(self.idx2char[i])
-        word = "".join(char_list)
+
+        word = "".join(char_list).replace('$','').replace('#','') # remove tokens
         return word
 
 
@@ -68,12 +77,12 @@ class XlitData(Dataset):
     JSON format only
     depends on: Numpy
     """
-    def __init__(self, json_file, file_map = "LangEn",
-                     src_lang = 'en', tgt_lang = 'hi',
-                     padding = True,
+    def __init__(self, src_glyph_obj, tgt_glyph_obj,
+                    json_file, file_map = "LangEn",
+                    padding = True,
                  ):
         """
-        batching: Set True if Padding with zeros is required for Batching
+        padding: Set True if Padding with zeros is required for Batching
         """
         #Load data
         if file_map == "LangEn":
@@ -83,11 +92,11 @@ class XlitData(Dataset):
         else:
             raise Exception('Unknown JSON structure')
 
-        self.srcglyph = GlyphStrawboss(src_lang)
-        self.tgtglyph = GlyphStrawboss(tgt_lang)
+        self.src_glyph = src_glyph_obj
+        self.tgt_glyph = tgt_glyph_obj
 
-        __svec = self.srcglyph.word2xlitvec
-        __tvec = self.tgtglyph.word2xlitvec
+        __svec = self.src_glyph.word2xlitvec
+        __tvec = self.tgt_glyph.word2xlitvec
         self.src = [ __svec(s)  for s in src_str]
         self.tgt = [ __tvec(s)  for s in tgt_str]
         self.padding = padding
@@ -95,13 +104,15 @@ class XlitData(Dataset):
         self.max_tgt_size = max(len(t) for t in self.tgt)
 
     def __getitem__(self, index):
+        x_sz = len(self.src[index])
+        y_sz = len(self.tgt[index])
         if self.padding:
             x = self._pad_sequence(self.src[index], self.max_src_size)
             y = self._pad_sequence(self.tgt[index], self.max_tgt_size)
         else:
             x = self.src[index]
             y = self.tgt[index]
-        return x,y
+        return x,y, x_sz, y_sz
 
     def __len__(self):
         return len(self.src)
@@ -127,7 +138,7 @@ class XlitData(Dataset):
         Pads zero if word < max
         Clip word if word > max
         """
-        padded = np.zeros((max_len), dtype=np.int64)
+        padded = np.zeros((max_len), dtype=NP_TYPE)
         if len(x) > max_len: padded[:] = x[:max_len]
         else: padded[:len(x)] = x
         return padded
