@@ -6,14 +6,15 @@ NP_TYPE = np.int64
 
 ##====== Unicodes ==============================================================
 
-misc_chars = [
-    chr(8204), # ZeroWidth-NonJoiner U+200c
-    chr(8205), # ZeroWidthJoiner U+200d
-]
 
 indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
 english_smallcase = [chr(alpha) for alpha in range(97, 123)]
 devanagari_scripts =  [chr(alpha) for alpha in range(2304, 2432)]
+
+misc_chars = [ # ! Don't Change the sequence order
+    chr(8204), # ZeroWidth-NonJoiner U+200c
+    chr(8205), # ZeroWidthJoiner U+200d
+]
 
 #-------------------------------------------------------------------------------
 
@@ -25,7 +26,7 @@ class GlyphStrawboss():
         self.lang = lang
         if lang == 'en':
             self.glyphs = english_smallcase + indoarab_numeric
-        elif lang in ['hi']:
+        elif lang in ['hi']: #TODO: Move misc to last
             self.glyphs = misc_chars + devanagari_scripts + indoarab_numeric
 
         self.glyph_size = len(self.glyphs)

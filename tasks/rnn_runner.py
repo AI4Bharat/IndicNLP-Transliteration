@@ -28,8 +28,8 @@ if not os.path.exists(WGT_PATH): os.makedirs(WGT_PATH)
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
-num_epochs = 100
-batch_size = 3
+num_epochs = 1000
+batch_size = 1
 acc_grad = 1
 learning_rate = 1e-5
 pretrain_wgt_path = None
@@ -54,12 +54,12 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 256
-dec_emb_dim = 256
-hidden_dim = 512
-n_layers = 10 #TODO: support attention mech for 2+more layers
+enc_emb_dim = 128
+dec_emb_dim = 128
+hidden_dim = 256
+n_layers = 2
 m_dropout = 0
-
+teacher_forcing = 0.5
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
                 hidden_dim= hidden_dim,
                 enc_layers= n_layers, enc_dropout= m_dropout)
@@ -67,7 +67,8 @@ dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
                 hidden_dim= hidden_dim,
                 dec_layers= n_layers, dec_dropout= m_dropout)
 
-model = Seq2Seq(enc, dec, device=device).to(device)
+model = Seq2Seq(enc, dec, device=device)
+model = model.to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
@@ -101,6 +102,7 @@ if __name__ =="__main__":
     best_loss = float("inf")
     for epoch in range(num_epochs):
         #-------- Training -------------------
+        model.train()
         acc_loss = 0
         running_loss = []
         for ith, (src, tgt, src_sz, tgt_sz) in enumerate(train_dataloader):
@@ -109,7 +111,7 @@ if __name__ =="__main__":
             tgt = tgt.to(device)
 
             #------ forward ------
-            output = model(src, tgt, src_sz, tgt_sz)
+            output = model(src, tgt, src_sz, teacher_forcing)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
 
@@ -127,6 +129,7 @@ if __name__ =="__main__":
         LOG2CSV(running_loss, LOG_PATH+"trainLoss.csv")
 
         #--------- Validate ---------------------
+        model.eval()
         val_loss = 0
         val_accuracy = 0
         for jth, (v_src, v_tgt, v_src_sz, v_tgt_sz) in enumerate(val_dataloader):

@@ -30,7 +30,7 @@ class Encoder(nn.Module):
         x = pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, batch_size, enc_embed_dim
-        # hidden: 1, batch_size, hidden_dim
+        # hidden: n_layer, batch_size, hidden_dim
         output, hidden = self.gru(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
@@ -40,6 +40,11 @@ class Encoder(nn.Module):
         # output: batch_size, max_length, hidden_dim
         output = output.permute(1,0,2)
 
+        return output, hidden
+
+    def inference(x):
+        x = self.embedding(x)
+        output, hidden = self.gru(x)
         return output, hidden
 
 
@@ -133,16 +138,14 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, device,
-                    teacher_forcing_ratio = 0.5,):
+    def __init__(self, encoder, decoder, device):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
-        self.teach_force = teacher_forcing_ratio
         self.device = device
 
-    def forward(self, src, tgt, src_sz, tgt_sz):
+    def forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
         '''
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
@@ -161,6 +164,7 @@ class Seq2Seq(nn.Module):
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
+        pred_vecs[0] = dec_input
 
         for t in range(1, tgt.size(1)):
             # dec_hidden: 1, batch_size, hidden_dim
@@ -175,7 +179,7 @@ class Seq2Seq(nn.Module):
             prediction = torch.argmax(dec_output, dim=1)
 
             # Teacher Forcing
-            if random.random() < self.teach_force:
+            if random.random() < teacher_forcing_ratio:
                 dec_input = tgt[:, t].unsqueeze(1)
             else:
                 dec_input = prediction.unsqueeze(1)
@@ -184,3 +188,28 @@ class Seq2Seq(nn.Module):
         pred_vecs = pred_vecs.permute(1,0,2)
 
         return pred_vecs
+
+    def inference(self, src, start_tok, end_tok, max_tgt_sz = 50 ):
+
+        enc_output, enc_hidden = self.encoder(src)
+        dec_hidden = enc_hidden
+        pred_vec = torch.zeros(max_tgt_sz).to(self.device)
+        dec_input = start_tok.unsqueeze(1)
+        pred[0] = dec_input
+        for t in range(1, max_tgt_sz):
+
+            dec_output, dec_hidden = self.decoder( dec_input,
+                                               dec_hidden,
+                                               enc_output,  )
+            prediction = torch.argmax(dec_output, dim=1)
+            pred_vec[t] = prediction
+            dec_input = prediction.unsqueeze(1)
+
+            if torch.eq(prediction, end_tok):
+                break
+
+        return pred_vec
+
+
+
+
