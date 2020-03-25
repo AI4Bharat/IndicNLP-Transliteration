@@ -17,7 +17,7 @@ INST_NAME = "Training_101"
 
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = "cpu"
+
 LOG_PATH = "logs/"+INST_NAME+"/"
 WGT_PATH = "hypotheses/"+INST_NAME+"/"
 if not os.path.exists(LOG_PATH): os.makedirs(LOG_PATH)
@@ -28,21 +28,21 @@ if not os.path.exists(WGT_PATH): os.makedirs(WGT_PATH)
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
-num_epochs = 1000
-batch_size = 1
+num_epochs = 100
+batch_size = 3
 acc_grad = 1
 learning_rate = 1e-5
 pretrain_wgt_path = None
 
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/HiEn_all_train_set.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/HiEn_varnam_test.json', file_map = "LangEn",
                         padding=True)
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -57,7 +57,7 @@ output_dim = tgt_glyph.size()
 enc_emb_dim = 256
 dec_emb_dim = 256
 hidden_dim = 512
-n_layers = 1
+n_layers = 2
 m_dropout = 0
 
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,

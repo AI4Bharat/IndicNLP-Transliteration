@@ -1,8 +1,15 @@
+import sys
 from torch.utils.data import Dataset
 import numpy as np
 
 NP_TYPE = np.int64
+
 ##====== Unicodes ==============================================================
+
+misc_chars = [
+    chr(8204), # ZeroWidth-NonJoiner U+200c
+    chr(8205), # ZeroWidthJoiner U+200d
+]
 
 indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
 english_smallcase = [chr(alpha) for alpha in range(97, 123)]
@@ -19,7 +26,7 @@ class GlyphStrawboss():
         if lang == 'en':
             self.glyphs = english_smallcase + indoarab_numeric
         elif lang in ['hi']:
-            self.glyphs = devanagari_scripts + indoarab_numeric
+            self.glyphs = misc_chars + devanagari_scripts + indoarab_numeric
 
         self.glyph_size = len(self.glyphs)
         self.char2idx = {}
@@ -48,13 +55,18 @@ class GlyphStrawboss():
         """ Converts given string of gyphs(word) to vector(numpy)
         Also adds tokens for start and end
         """
-        vec = [self.char2idx['$']] #start token
-        for i in list(word):
-            vec.append(self.char2idx[i])
-        vec.append(self.char2idx['#']) #end token
+        try:
+            vec = [self.char2idx['$']] #start token
+            for i in list(word):
+                vec.append(self.char2idx[i])
+            vec.append(self.char2idx['#']) #end token
 
-        vec = np.asarray(vec, dtype=NP_TYPE)
-        return vec
+            vec = np.asarray(vec, dtype=NP_TYPE)
+            return vec
+
+        except Exception as error:
+            print("Error In word:", word, "Erro:", error)
+            sys.exit()
 
     def xlitvec2word(self, vector):
         """ Converts vector(numpy) to string of glyphs(word)
