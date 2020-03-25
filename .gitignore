@@ -3,6 +3,7 @@ data/*
 hypotheses/*
 logs
 *.log
+temp*
 
 !README.md
 !readme.md

@@ -57,7 +57,7 @@ output_dim = tgt_glyph.size()
 enc_emb_dim = 256
 dec_emb_dim = 256
 hidden_dim = 512
-n_layers = 2
+n_layers = 1 #TODO: support attention mech for 2+more layers
 m_dropout = 0
 
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,

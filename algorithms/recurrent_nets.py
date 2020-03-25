@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+import random
 
 class Encoder(nn.Module):
     def __init__(self, input_dim, enc_embed_dim, hidden_dim ,
@@ -38,7 +39,7 @@ class Encoder(nn.Module):
 
         # output: batch_size, max_length, hidden_dim
         output = output.permute(1,0,2)
-
+        print("Enchidd_shape:", hidden.shape)
         return output, hidden
 
 
@@ -77,7 +78,9 @@ class Decoder(nn.Module):
         ## perform addition to calculate the score
 
         # hidden_with_time_axis shape == (batch_size, 1, hidden_dim)
+        print("EncOutput", enc_output.shape)
         hidden_with_time_axis = hidden.permute(1, 0, 2)
+        print("HiddenTimeaxis:", hidden_with_time_axis.shape)
         # score: (batch_size, max_length, hidden_dim)
         score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
 
@@ -150,14 +153,14 @@ class Seq2Seq(nn.Module):
                                                enc_output,  )
             pred_vecs[t] = dec_output
 
-            # Teacher Forcing
-            if random.random() < self.teach_force
-                dec_input = tgt[:, t].unsqueeze(1)
-            else
-                dec_input = prediction.unsqueeze(1)
-
             # # prediction: batch_size
-            # prediction = torch.argmax(dec_output, dim=1)
+            prediction = torch.argmax(dec_output, dim=1)
+
+            # Teacher Forcing
+            if random.random() < self.teach_force:
+                dec_input = tgt[:, t].unsqueeze(1)
+            else:
+                dec_input = prediction.unsqueeze(1)
 
         # pred_vecs: (batch_size, sequence_sz)
         pred_vecs = pred_vecs.permute(1,0,2)
