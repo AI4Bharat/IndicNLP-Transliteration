@@ -18,7 +18,7 @@ class Encoder(nn.Module):
 
     def forward(self, x, x_sz):
         """
-        src_sz: [batch_size, 1] -  Unpadded sequence lengths used for pack_pad
+        src_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
         """
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
@@ -92,8 +92,7 @@ class Decoder(nn.Module):
         context_vector = context_vector.unsqueeze(1)
         ## -------------------------
 
-        # x shape after passing through embedding == (batch_size, 1, dec_embed_dim)
-
+        # x shape after embedding == (batch_size, 1, dec_embed_dim)
         x = self.embedding(x)
 
         # x shape after concatenation == (batch_size, 1, dec_embed_dim + hidden_size)
@@ -114,11 +113,13 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder):
+    def __init__(self, encoder, decoder,
+                    teacher_forcing_ratio = 0.5,):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
+        self.teach_force = teacher_forcing_ratio
 
     def forward(self, src, tgt, src_sz, tgt_sz):
         '''
@@ -134,24 +135,31 @@ class Seq2Seq(nn.Module):
         batch_size = tgt.shape[0]
         dec_hidden = enc_hidden
 
-
-        # preds: (sequence_sz, batch_size, output_dim )
+        # pred_vecs: (sequence_sz, batch_size, output_dim)
         pred_vecs = torch.zeros(tgt.size(1) , batch_size, self.decoder.output_dim)
-
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
 
         for t in range(1, tgt.size(1)):
-            # enc_hidden: 1, batch_size, enc_hidden
-            # output: max_length, batch_size, enc_hidden
-            prediction, dec_hidden = self.decoder( dec_input,
+            # dec_hidden: 1, batch_size, hidden_dim
+            # dec_output: batch_size, output_dim
+            # dec_input: (batch_size, 1)
+            dec_output, dec_hidden = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
+            pred_vecs[t] = dec_output
 
-            # dec_input = prediction.unsqueeze(1)
-            dec_input = tgt[:, t].unsqueeze(1)
-            pred_vecs[t] = prediction
+            # Teacher Forcing
+            if random.random() < self.teach_force
+                dec_input = tgt[:, t].unsqueeze(1)
+            else
+                dec_input = prediction.unsqueeze(1)
 
+            # # prediction: batch_size
+            # prediction = torch.argmax(dec_output, dim=1)
+
+        # pred_vecs: (batch_size, sequence_sz)
         pred_vecs = pred_vecs.permute(1,0,2)
+
         return pred_vecs
