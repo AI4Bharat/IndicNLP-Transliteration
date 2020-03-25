@@ -13,7 +13,7 @@ from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
 ##===== Init Setup =============================================================
 MODE = rutl.RunMode.train
-INST_NAME = "Training_101"
+INST_NAME = "Training_Test"
 
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -36,13 +36,13 @@ pretrain_wgt_path = None
 
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/HiEn_all_train_set.json', file_map = "LangEn",
+                        json_file='data/checkup-train.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/HiEn_varnam_test.json', file_map = "LangEn",
+                        json_file='data/checkup-test.json', file_map = "LangEn",
                         padding=True)
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -57,7 +57,7 @@ output_dim = tgt_glyph.size()
 enc_emb_dim = 256
 dec_emb_dim = 256
 hidden_dim = 512
-n_layers = 1 #TODO: support attention mech for 2+more layers
+n_layers = 10 #TODO: support attention mech for 2+more layers
 m_dropout = 0
 
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
@@ -67,7 +67,7 @@ dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
                 hidden_dim= hidden_dim,
                 dec_layers= n_layers, dec_dropout= m_dropout)
 
-model = Seq2Seq(enc, dec).to(device)
+model = Seq2Seq(enc, dec, device=device).to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
@@ -86,7 +86,7 @@ def loss_estimator(pred, truth):
     pred = torch.cat(torch.unbind(pred, dim=0))
     truth = torch.cat(torch.unbind(truth, dim=0))
 
-    mask = truth.ge(1).type(torch.FloatTensor)
+    mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
 

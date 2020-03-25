@@ -39,7 +39,7 @@ class Encoder(nn.Module):
 
         # output: batch_size, max_length, hidden_dim
         output = output.permute(1,0,2)
-        print("Enchidd_shape:", hidden.shape)
+
         return output, hidden
 
 
@@ -63,26 +63,32 @@ class Decoder(nn.Module):
 
 
         ##----- Attention ----------
-        self.W1 = nn.Linear(self.hidden_dim, self.hidden_dim)
-        self.W2 = nn.Linear(self.hidden_dim, self.hidden_dim)
-        self.V = nn.Linear(self.hidden_dim, 1)
+        self.W1 = nn.Linear( self.hidden_dim, self.hidden_dim)
+        self.W2 = nn.Linear( self.dec_layers * self.hidden_dim, self.hidden_dim)
+        self.V = nn.Linear( self.hidden_dim, 1)
 
-    def forward(self, x, hidden, enc_output):
+    def attention(self, x, hidden, enc_output):
         '''
+        x: (batch_size, 1, dec_embed_dim) -> after Embedding
         enc_output: batch_size, max_length, dec_embed_dim
-        hidden: 1, batch_size, hidden_size
+        hidden: n_layers, batch_size, hidden_size
         '''
-
-        ##----- Attention ----------
 
         ## perform addition to calculate the score
 
-        # hidden_with_time_axis shape == (batch_size, 1, hidden_dim)
-        print("EncOutput", enc_output.shape)
-        hidden_with_time_axis = hidden.permute(1, 0, 2)
-        print("HiddenTimeaxis:", hidden_with_time_axis.shape)
+        # hidden (batch_size, n_layers, hidden_dim) -> to prevent distortion
+        hidden = hidden.permute(1, 0, 2)
+
+        # W1x_enc_out: batch_size, max_length, dec_embed_dim
+        # W2x_hidden: batch_size, dec_embed_dim
+        W1x_enc_out = self.W1(enc_output)
+        W2x_hidden = self.W2(hidden.reshape(-1, self.dec_layers*self.hidden_dim))
+
+        # W2x_hidden: batch_size, 1, dec_embed_dim -> with axis for time step
+        W2x_hidden = W2x_hidden.unsqueeze(1)
+
         # score: (batch_size, max_length, hidden_dim)
-        score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
+        score = torch.tanh( W1x_enc_out + W2x_hidden)
 
         # attention_weights shape == (batch_size, max_length, 1)
         # we get 1 at the last axis because we are applying score to self.V
@@ -93,18 +99,29 @@ class Decoder(nn.Module):
         context_vector = torch.sum(context_vector, dim=1)
         # context_vector: batch_size, 1, hidden_dim
         context_vector = context_vector.unsqueeze(1)
-        ## -------------------------
 
-        # x shape after embedding == (batch_size, 1, dec_embed_dim)
+        # attend_out (batch_size, 1, dec_embed_dim + hidden_size)
+        attend_out = torch.cat((context_vector, x), -1)
+
+        return attend_out
+
+    def forward(self, x, hidden, enc_output):
+        '''
+        x: (batch_size, 1)
+        enc_output: batch_size, max_length, dec_embed_dim
+        hidden: 1, batch_size, hidden_size
+        '''
+
+        # x (batch_size, 1, dec_embed_dim) -> after embedding
         x = self.embedding(x)
 
-        # x shape after concatenation == (batch_size, 1, dec_embed_dim + hidden_size)
-        x = torch.cat((context_vector, x), -1)
+        # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
+        x = self.attention( x, hidden, enc_output)
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, 1, hidden_size)
-        # state: 1, batch_size, hidden_size
-        output, state = self.gru(x)
+        # hidden: 1, batch_size, hidden_size
+        output, hidden = self.gru(x)
 
         # output shape == (batch_size * 1, hidden_size)
         output =  output.view(-1, output.size(2))
@@ -112,17 +129,18 @@ class Decoder(nn.Module):
         # output shape == (batch_size * 1, output_dim)
         output = self.fc(output)
 
-        return output, state
+        return output, hidden
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder,
+    def __init__(self, encoder, decoder, device,
                     teacher_forcing_ratio = 0.5,):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
         self.teach_force = teacher_forcing_ratio
+        self.device = device
 
     def forward(self, src, tgt, src_sz, tgt_sz):
         '''
@@ -139,7 +157,7 @@ class Seq2Seq(nn.Module):
         dec_hidden = enc_hidden
 
         # pred_vecs: (sequence_sz, batch_size, output_dim)
-        pred_vecs = torch.zeros(tgt.size(1) , batch_size, self.decoder.output_dim)
+        pred_vecs = torch.zeros(tgt.size(1) , batch_size, self.decoder.output_dim).to(self.device)
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
