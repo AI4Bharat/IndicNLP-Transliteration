@@ -28,7 +28,7 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 1
+batch_size = 256
 acc_grad = 1
 learning_rate = 1e-5
 teacher_forcing, teach_force_till = 0.5, 5
@@ -54,8 +54,8 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
 enc_emb_dim = 64
-dec_emb_dim = 64
-hidden_dim = 256
+dec_emb_dim = 128
+hidden_dim = 128
 n_layers = 2
 m_dropout = 0
 
