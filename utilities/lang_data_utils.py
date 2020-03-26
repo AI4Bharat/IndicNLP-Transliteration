@@ -49,7 +49,7 @@ class GlyphStrawboss():
             self.idx2char[idx] = char
 
     def size(self):
-        return self.glyph_size
+        return len(self.char2idx)
 
 
     def word2xlitvec(self, word):
@@ -77,6 +77,7 @@ class GlyphStrawboss():
             char_list.append(self.idx2char[i])
 
         word = "".join(char_list).replace('$','').replace('#','') # remove tokens
+        word = word.replace("_", "")
         return word
 
 
