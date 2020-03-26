@@ -18,10 +18,9 @@ INST_NAME = "Training_Test"
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-LOG_PATH = "logs/"+INST_NAME+"/"
-WGT_PATH = "hypotheses/"+INST_NAME+"/"
-if not os.path.exists(LOG_PATH): os.makedirs(LOG_PATH)
-if not os.path.exists(WGT_PATH): os.makedirs(WGT_PATH)
+LOG_PATH = "hypotheses/"+INST_NAME+"/"
+WGT_PREFIX = LOG_PATH+"weights/"+INST_NAME
+if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================
 
@@ -32,17 +31,17 @@ num_epochs = 1000
 batch_size = 1
 acc_grad = 1
 learning_rate = 1e-5
+teacher_forcing, teach_force_till = 0.5, 5
 pretrain_wgt_path = None
 
-
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/HiEn_all_train_set.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-test.json', file_map = "LangEn",
+                        json_file='data/HiEn_varnam_test.json', file_map = "LangEn",
                         padding=True)
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -54,12 +53,12 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 128
-dec_emb_dim = 128
+enc_emb_dim = 64
+dec_emb_dim = 64
 hidden_dim = 256
 n_layers = 2
 m_dropout = 0
-teacher_forcing = 0.5
+
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
                 hidden_dim= hidden_dim,
                 enc_layers= n_layers, enc_dropout= m_dropout)
@@ -101,10 +100,13 @@ if __name__ =="__main__":
 
     best_loss = float("inf")
     for epoch in range(num_epochs):
+
         #-------- Training -------------------
         model.train()
         acc_loss = 0
         running_loss = []
+        if epoch >= teach_force_till: teacher_forcing = 0
+
         for ith, (src, tgt, src_sz, tgt_sz) in enumerate(train_dataloader):
 
             src = src.to(device)
@@ -153,6 +155,6 @@ if __name__ =="__main__":
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(model.state_dict(), WGT_PATH+INST_NAME+"_model-{}.pth".format(epoch))
+            torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")

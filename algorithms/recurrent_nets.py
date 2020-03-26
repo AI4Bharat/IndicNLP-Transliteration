@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import random
 
 class Encoder(nn.Module):
@@ -27,7 +26,7 @@ class Encoder(nn.Module):
         ## pack the padded data
         # x: max_length, batch_size, enc_embed_dim -> for pack_pad
         x = x.permute(1,0,2)
-        x = pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
+        x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, batch_size, enc_embed_dim
         # hidden: n_layer, batch_size, hidden_dim
@@ -35,16 +34,11 @@ class Encoder(nn.Module):
 
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, hidden_dim)
-        output, _ = pad_packed_sequence(output)
+        output, _ = nn.utils.rnn.pad_packed_sequence(output)
 
         # output: batch_size, max_length, hidden_dim
         output = output.permute(1,0,2)
 
-        return output, hidden
-
-    def inference(x):
-        x = self.embedding(x)
-        output, hidden = self.gru(x)
         return output, hidden
 
 
@@ -69,7 +63,7 @@ class Decoder(nn.Module):
 
         ##----- Attention ----------
         self.W1 = nn.Linear( self.hidden_dim, self.hidden_dim)
-        self.W2 = nn.Linear( self.dec_layers * self.hidden_dim, self.hidden_dim)
+        self.W2 = nn.Linear( self.hidden_dim, self.hidden_dim)
         self.V = nn.Linear( self.hidden_dim, 1)
 
     def attention(self, x, hidden, enc_output):
@@ -81,19 +75,13 @@ class Decoder(nn.Module):
 
         ## perform addition to calculate the score
 
-        # hidden (batch_size, n_layers, hidden_dim) -> to prevent distortion
-        hidden = hidden.permute(1, 0, 2)
-
-        # W1x_enc_out: batch_size, max_length, dec_embed_dim
-        # W2x_hidden: batch_size, dec_embed_dim
-        W1x_enc_out = self.W1(enc_output)
-        W2x_hidden = self.W2(hidden.reshape(-1, self.dec_layers*self.hidden_dim))
-
-        # W2x_hidden: batch_size, 1, dec_embed_dim -> with axis for time step
-        W2x_hidden = W2x_hidden.unsqueeze(1)
+        # hidden_with_time_axis shape == (batch_size, 1, hidden_dim)
+        ## hidden_with_time_axis = hidden.permute(1, 0, 2) ## replaced with below 2lines
+        hidden_with_time_axis = torch.sum(hidden, axis=0)
+        hidden_with_time_axis = hidden_with_time_axis.unsqueeze(1)
 
         # score: (batch_size, max_length, hidden_dim)
-        score = torch.tanh( W1x_enc_out + W2x_hidden)
+        score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
 
         # attention_weights shape == (batch_size, max_length, 1)
         # we get 1 at the last axis because we are applying score to self.V
@@ -138,14 +126,14 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, device):
+    def __init__(self, encoder, decoder, device,):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
         self.device = device
 
-    def forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
+    def forward(self, src, tgt, src_sz, tgt_sz, teacher_forcing_ratio = 0):
         '''
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
@@ -164,7 +152,6 @@ class Seq2Seq(nn.Module):
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
-        pred_vecs[0] = dec_input
 
         for t in range(1, tgt.size(1)):
             # dec_hidden: 1, batch_size, hidden_dim
@@ -189,27 +176,33 @@ class Seq2Seq(nn.Module):
 
         return pred_vecs
 
-    def inference(self, src, start_tok, end_tok, max_tgt_sz = 50 ):
+    def inference(self, src, max_tgt_sz=50):
+        '''
+        src: (sequence_len)
+        '''
+        batch_size = 1
+        start_tok = src[0]
+        end_tok = src[-1]
+        src_sz = torch.tensor([len(src)])
+        src_ = src.unsqueeze(0)
 
-        enc_output, enc_hidden = self.encoder(src)
+        enc_output, enc_hidden = self.encoder(src_, src_sz)
         dec_hidden = enc_hidden
-        pred_vec = torch.zeros(max_tgt_sz).to(self.device)
-        dec_input = start_tok.unsqueeze(1)
-        pred[0] = dec_input
-        for t in range(1, max_tgt_sz):
 
+        pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
+        # dec_input: (batch_size, 1)
+        dec_input = start_tok.view(1,1) # initialize to start token
+
+        for t in range(max_tgt_sz):
             dec_output, dec_hidden = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
             prediction = torch.argmax(dec_output, dim=1)
-            pred_vec[t] = prediction
             dec_input = prediction.unsqueeze(1)
-
+            pred_arr[t] = prediction
             if torch.eq(prediction, end_tok):
                 break
-
-        return pred_vec
-
+        return pred_arr.squeeze()
 
 
 
