@@ -28,15 +28,15 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
-num_epochs = 200
-batch_size = 1
+num_epochs = 1000
+batch_size = 1024
 acc_grad = 1
-learning_rate = 1e-6
-teacher_forcing, teach_force_till = 0.50, 50
+learning_rate = 1e-4
+teacher_forcing, teach_force_till = 0.50, 3
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-test.json', file_map = "LangEn",
+                        json_file='data/checkup-train.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -62,10 +62,12 @@ m_dropout = 0
 
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
                 hidden_dim= hidden_dim,
-                enc_layers= n_layers, enc_dropout= m_dropout)
+                enc_layers= n_layers,
+                enc_dropout= m_dropout, device = device)
 dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
                 hidden_dim= hidden_dim,
-                dec_layers= n_layers, dec_dropout= m_dropout)
+                dec_layers= n_layers,
+                dec_dropout= m_dropout,  device = device)
 
 model = Seq2Seq(enc, dec, device=device)
 model = model.to(device)
@@ -118,7 +120,7 @@ if __name__ =="__main__":
             output = model(src, tgt, src_sz, teacher_forcing)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
-            sys.exit()
+
             #--- backward ------
             loss.backward()
             if ( (ith+1) % acc_grad == 0):
