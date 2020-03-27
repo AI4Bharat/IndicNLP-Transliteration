@@ -66,7 +66,7 @@ class GlyphStrawboss():
             return vec
 
         except Exception as error:
-            print("Error In word:", word, "Erro:", error)
+            print("Error In word:", word, "Error Char not in Token:", error)
             sys.exit()
 
     def xlitvec2word(self, vector):
