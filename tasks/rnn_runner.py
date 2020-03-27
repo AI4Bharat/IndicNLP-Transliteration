@@ -29,14 +29,14 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 200
-batch_size = 512
+batch_size = 1
 acc_grad = 1
 learning_rate = 1e-6
 teacher_forcing, teach_force_till = 0.50, 50
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/checkup-test.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -86,6 +86,8 @@ def loss_estimator(pred, truth):
     """ Only consider non-zero inputs in the loss; mask needed
     pred: batch
     """
+    pred = pred[:,:,1:]
+    truth = truth[:,1:]
     mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
@@ -116,13 +118,13 @@ if __name__ =="__main__":
             output = model(src, tgt, src_sz, teacher_forcing)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
-
+            sys.exit()
             #--- backward ------
             loss.backward()
             if ( (ith+1) % acc_grad == 0):
                 optimizer.step()
                 optimizer.zero_grad()
-                print('epoch[{}/{}], Mini Batch-{} loss:{:.4f}'
+                print('epoch[{}/{}], MiniBatch-{} loss:{:.4f}'
                     .format(epoch+1, num_epochs, (ith+1)//acc_grad, acc_loss.data))
                 running_loss.append(acc_loss.item())
                 acc_loss=0
