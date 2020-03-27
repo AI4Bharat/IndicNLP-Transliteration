@@ -28,11 +28,11 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
-num_epochs = 20000
-batch_size = 8
+num_epochs = 200
+batch_size = 512
 acc_grad = 1
-learning_rate = 1e-4
-teacher_forcing, teach_force_till = 0.5, 5
+learning_rate = 1e-6
+teacher_forcing, teach_force_till = 0.75, 100
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
@@ -54,10 +54,10 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 128
-dec_emb_dim = 128
-hidden_dim = 256
-n_layers = 2
+enc_emb_dim = 256
+dec_emb_dim = 256
+hidden_dim = 512
+n_layers = 3
 m_dropout = 0
 
 enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
@@ -155,8 +155,7 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
-        # if val_loss < best_loss:
-        if epoch%100 == 99:
+        if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))

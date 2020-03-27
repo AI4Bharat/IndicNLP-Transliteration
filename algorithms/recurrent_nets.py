@@ -152,7 +152,7 @@ class Seq2Seq(nn.Module):
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
-
+        pred_vecs[0] = dec_input   # set first token
         for t in range(1, tgt.size(1)):
             # dec_hidden: 1, batch_size, hidden_dim
             # dec_output: batch_size, output_dim
