@@ -32,7 +32,7 @@ num_epochs = 200
 batch_size = 512
 acc_grad = 1
 learning_rate = 1e-6
-teacher_forcing, teach_force_till = 0.75, 100
+teacher_forcing, teach_force_till = 0.50, 50
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
@@ -86,9 +86,6 @@ def loss_estimator(pred, truth):
     """ Only consider non-zero inputs in the loss; mask needed
     pred: batch
     """
-    pred = torch.cat(torch.unbind(pred, dim=0))
-    truth = torch.cat(torch.unbind(truth, dim=0))
-
     mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)

@@ -171,8 +171,8 @@ class Seq2Seq(nn.Module):
             else:
                 dec_input = prediction.unsqueeze(1)
 
-        # pred_vecs: (batch_size, sequence_sz)
-        pred_vecs = pred_vecs.permute(1,0,2)
+        # pred_vecs: (batch_size, vocab_sz, sequence_sz)
+        pred_vecs = pred_vecs.permute(1,2,0) # Shape required by CE
 
         return pred_vecs
 
