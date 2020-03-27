@@ -4,9 +4,11 @@ import random
 
 class Encoder(nn.Module):
     def __init__(self, input_dim, enc_embed_dim, hidden_dim ,
-                       enc_layers = 1, enc_dropout = 0):
+                       enc_layers = 1, enc_dropout = 0,
+                       device = "cpu"):
         super(Encoder, self).__init__()
 
+        self.device = device
         self.enc_layers = enc_layers
         self.hidden_dim = hidden_dim
         self.input_dim = input_dim #src_vocab_sz
@@ -14,14 +16,18 @@ class Encoder(nn.Module):
         self.embedding = nn.Embedding(self.input_dim, self.enc_embed_dim)
         self.gru = nn.GRU(input_size= self.enc_embed_dim,
                           hidden_size= self.hidden_dim,
-                          num_layers= self.enc_layers )
+                          num_layers= self.enc_layers,)
 
     def forward(self, x, x_sz):
         """
         src_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
         """
+        batch_sz = x.shape[0]
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
+
+        # hidden: n_layer, batch_size, hidden_dim
+        hidden = torch.zeros((self.enc_layers, batch_sz, self.hidden_dim)).to(self.device)
 
         ## pack the padded data
         # x: max_length, batch_size, enc_embed_dim -> for pack_pad
@@ -30,7 +36,7 @@ class Encoder(nn.Module):
 
         # output: packed_size, batch_size, enc_embed_dim
         # hidden: n_layer, batch_size, hidden_dim
-        output, hidden = self.gru(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        output, hidden = self.gru(x, hidden) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, hidden_dim)
@@ -46,9 +52,11 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, output_dim, dec_embed_dim, hidden_dim,
-                       dec_layers = 1, dec_dropout = 0):
+                       dec_layers = 1, dec_dropout = 0,
+                       device = "cpu"):
         super(Decoder, self).__init__()
 
+        self.device = device
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim #tgt_vocab_sz
         self.dec_embed_dim = dec_embed_dim
@@ -58,8 +66,11 @@ class Decoder(nn.Module):
                           hidden_size= self.hidden_dim,
                           num_layers= self.dec_layers,
                           batch_first = True )
-        self.fc = nn.Linear(self.hidden_dim, self.output_dim)
-
+        self.fc = nn.Sequential(
+            nn.Linear(self.hidden_dim, self.dec_embed_dim), nn.Tanh(),
+            nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.Tanh(),
+            nn.Linear(self.dec_embed_dim, self.output_dim),
+            )
 
         ##----- Attention ----------
         self.W1 = nn.Linear( self.hidden_dim, self.hidden_dim)
@@ -69,7 +80,7 @@ class Decoder(nn.Module):
     def attention(self, x, hidden, enc_output):
         '''
         x: (batch_size, 1, dec_embed_dim) -> after Embedding
-        enc_output: batch_size, max_length, dec_embed_dim
+        enc_output: batch_size, max_length, hidden_dim
         hidden: n_layers, batch_size, hidden_size
         '''
 
@@ -114,7 +125,7 @@ class Decoder(nn.Module):
         # passing the concatenated vector to the GRU
         # output: (batch_size, 1, hidden_size)
         # hidden: 1, batch_size, hidden_size
-        output, hidden = self.gru(x)
+        output, hidden = self.gru(x, hidden)
 
         # output shape == (batch_size * 1, hidden_size)
         output =  output.view(-1, output.size(2))
@@ -132,6 +143,8 @@ class Seq2Seq(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.device = device
+        assert self.decoder.dec_layers == self.encoder.enc_layers
+        assert self.decoder.hidden_dim == self.encoder.hidden_dim
 
     def forward(self, src, tgt, src_sz, tgt_sz, teacher_forcing_ratio = 0):
         '''
@@ -147,8 +160,8 @@ class Seq2Seq(nn.Module):
         batch_size = tgt.shape[0]
         dec_hidden = enc_hidden
 
-        # pred_vecs: (sequence_sz, batch_size, output_dim)
-        pred_vecs = torch.zeros(tgt.size(1) , batch_size, self.decoder.output_dim).to(self.device)
+        # pred_vecs: (batch_size, output_dim, sequence_sz) -> shape required for CELoss
+        pred_vecs = torch.zeros(batch_size, self.decoder.output_dim, tgt.size(1)).to(self.device)
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
@@ -160,7 +173,7 @@ class Seq2Seq(nn.Module):
             dec_output, dec_hidden = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
-            pred_vecs[t] = dec_output
+            pred_vecs[:,:,t] = dec_output
 
             # # prediction: batch_size
             prediction = torch.argmax(dec_output, dim=1)
@@ -171,10 +184,7 @@ class Seq2Seq(nn.Module):
             else:
                 dec_input = prediction.unsqueeze(1)
 
-        # pred_vecs: (batch_size, vocab_sz, sequence_sz)
-        pred_vecs = pred_vecs.permute(1,2,0) # Shape required by CE
-
-        return pred_vecs
+        return pred_vecs #(batch_size, output_dim, sequence_sz)
 
     def inference(self, src, max_tgt_sz=50):
         '''
