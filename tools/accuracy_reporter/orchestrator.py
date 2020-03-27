@@ -3,6 +3,7 @@ To be run from Repo Root directory
 """
 import os
 import json
+from tqdm import tqdm
 
 def toggle_json(read_path, save_prefix=""):
     with open(read_path, 'r', encoding = "utf-8") as f:
@@ -33,10 +34,12 @@ def get_from_json(path, ret_data = "key"):
     if ret_data == "key":
         out = list(data.keys())
     elif ret_data == "value":
-        out = list(set(data.value()))
+        temp = data.values()
+        temp = { i for t in temp for i in t }
+        out = list(temp)
     elif ret_data == "both":
         out = []
-        for k in data:
+        for k in data.keys():
             for v in data[k]:
                 out.append([k,v])
 
@@ -49,10 +52,11 @@ def save_to_json(path, data_dict):
 ##------------------------------------------------------------------------------
 
 def inference_looper(in_words):
-    from tasks.infer_engine import hi_inferencer
+    from timeit import timeit
+    from tasks.infer_engine import inferencer
     out_dict = {}
-    for i in in_words:
-        out_dict[i] = hi_inferencer(word)
+    for i in tqdm(in_words):
+        out_dict[i] = inferencer(i)
     return out_dict
 
 ROOT_PATH= ""
@@ -60,19 +64,19 @@ SAVE_DIR = "tools/accuracy_reporter/temp-exp1"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 files = [
-    ROOT_PATH+"tools/accuracy_reporter/temp-data/temp-EnHi_fire13_dev.json",
-    ROOT_PATH+"tools/accuracy_reporter/temp-data/temp-EnHi_news18_dev.json",
-    ROOT_PATH+"tools/accuracy_reporter/temp-data/temp-EnHi_varnam_test.json",
-    ROOT_PATH+"tools/accuracy_reporter/temp-data/temp-EnHi_varnam_special_test.json",
+    # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_fire13_dev.json",
+    ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_news18_dev.json",
+    # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_varnam_test.json",
+    # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_varnam_special_test.json",
 ]
 
 if __name__ == "__main__":
 
     for fi in files:
-        # words = get_from_json(fi, "key")
-        # out_dict = inference_looper(words)
-        # sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
-        # save_to_json(sv_path, out_dict)
+        words = get_from_json(fi, "key")
+        out_dict = inference_looper(words)
+        sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
+        save_to_json(sv_path, out_dict)
 
         gt_json = fi
         pred_json = sv_path
