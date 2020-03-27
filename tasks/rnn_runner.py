@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import os
 import sys
+from tqdm import tqdm
 import utilities.running_utils as rutl
 from utilities.lang_data_utils import XlitData, GlyphStrawboss
 from utilities.logging_utils import LOG2CSV
@@ -27,21 +28,21 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
-num_epochs = 1000
-batch_size = 256
+num_epochs = 20000
+batch_size = 8
 acc_grad = 1
-learning_rate = 1e-5
+learning_rate = 1e-4
 teacher_forcing, teach_force_till = 0.5, 5
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/HiEn_all_train_set.json', file_map = "LangEn",
+                        json_file='data/checkup-train.json', file_map = "LangEn",
                         padding=True)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/HiEn_varnam_test.json', file_map = "LangEn",
+                        json_file='data/checkup-test.json', file_map = "LangEn",
                         padding=True)
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -53,9 +54,9 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 64
+enc_emb_dim = 128
 dec_emb_dim = 128
-hidden_dim = 128
+hidden_dim = 256
 n_layers = 2
 m_dropout = 0
 
@@ -74,7 +75,9 @@ model = model.to(device)
 ##------ Model Details ---------------------------------------------------------
 # rutl.count_train_param(model)
 # print(model)
-##==============================================================================
+
+
+##====== Optimizer Zone ===================================================================
 
 
 criterion = torch.nn.CrossEntropyLoss()
@@ -112,12 +115,12 @@ if __name__ =="__main__":
             src = src.to(device)
             tgt = tgt.to(device)
 
-            #------ forward ------
+            #--- forward ------
             output = model(src, tgt, src_sz, teacher_forcing)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
 
-            #------ backward ------
+            #--- backward ------
             loss.backward()
             if ( (ith+1) % acc_grad == 0):
                 optimizer.step()
@@ -134,7 +137,7 @@ if __name__ =="__main__":
         model.eval()
         val_loss = 0
         val_accuracy = 0
-        for jth, (v_src, v_tgt, v_src_sz, v_tgt_sz) in enumerate(val_dataloader):
+        for jth, (v_src, v_tgt, v_src_sz, v_tgt_sz) in enumerate(tqdm(val_dataloader)):
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
@@ -152,7 +155,8 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
-        if val_loss < best_loss:
+        # if val_loss < best_loss:
+        if epoch%100 == 99:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))

@@ -8,13 +8,13 @@ import torch
 from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
 ## Network Code Tag: rnn_0.1
-weight_path = "hypotheses/training-102/Training_102_model-2.pth"
+weight_path = "hypotheses/training-90/Training_90_model-103.pth"
 input_dim = en_glyph.size()
 output_dim = hi_glyph.size()
-enc_emb_dim = 64
+enc_emb_dim = 128
 dec_emb_dim = 128
-hidden_dim = 128
-n_layers = 2
+hidden_dim = 256
+n_layers = 1
 
 enc = Encoder(input_dim= input_dim,
                 enc_embed_dim = enc_emb_dim,
