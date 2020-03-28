@@ -67,8 +67,8 @@ class Decoder(nn.Module):
                           num_layers= self.dec_layers,
                           batch_first = True )
         self.fc = nn.Sequential(
-            nn.Linear(self.hidden_dim, self.dec_embed_dim), nn.Tanh(),
-            nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.Tanh(),
+            nn.Linear(self.hidden_dim, self.dec_embed_dim), nn.LeakyReLU(),
+            nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.LeakyReLU(),
             nn.Linear(self.dec_embed_dim, self.output_dim),
             )
 
