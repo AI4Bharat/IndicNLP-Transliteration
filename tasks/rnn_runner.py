@@ -2,6 +2,7 @@
 '''
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 import os
 import sys
@@ -28,6 +29,7 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
+paralleize_load = True
 num_epochs = 1000
 batch_size = 1024
 acc_grad = 1
@@ -70,6 +72,14 @@ dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
                 dec_dropout= m_dropout,  device = device)
 
 model = Seq2Seq(enc, dec, device=device)
+
+if (torch.cuda.device_count() > 1) and paralleize_load :
+    print("Multiple GPUs", torch.cuda.device_count(), "Parallelizing")
+    model = nn.DataParallel(model)
+else:
+    print("Running in Single GPU")
+    paralleize_load = False
+
 model = model.to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
@@ -122,7 +132,9 @@ if __name__ =="__main__":
             acc_loss += loss
 
             #--- backward ------
-            loss.backward()
+            if paralleize_load: loss.mean().backward()
+            else: loss.backward()
+
             if ( (ith+1) % acc_grad == 0):
                 optimizer.step()
                 optimizer.zero_grad()
