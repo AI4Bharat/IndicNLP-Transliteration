@@ -54,12 +54,12 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 64
-dec_emb_dim = 64
-enc_hidden_dim = 256
-dec_hidden_dim = 256
+enc_emb_dim = 256
+dec_emb_dim = 256
+enc_hidden_dim = 512
+dec_hidden_dim = 512
 enc_layers = 2
-dec_layers = 3
+dec_layers = 4
 m_dropout = 0
 enc_bidirect = True
 enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
@@ -94,8 +94,8 @@ def loss_estimator(pred, truth):
     """ Only consider non-zero inputs in the loss; mask needed
     pred: batch
     """
-    pred = pred[:,:,1:]
-    truth = truth[:,1:]
+    # pred = pred[:,:,1:]
+    # truth = truth[:,1:]
     mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
