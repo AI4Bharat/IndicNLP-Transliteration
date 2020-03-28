@@ -3,22 +3,24 @@ import torch.nn as nn
 import random
 
 class Encoder(nn.Module):
-    def __init__(self, input_dim, enc_embed_dim, hidden_dim ,
-                       enc_layers = 1, enc_dropout = 0,
+    def __init__(self, input_dim, embed_dim, hidden_dim ,
+                       layers = 1, dropout = 0, bidirectional =False,
                        device = "cpu"):
         super(Encoder, self).__init__()
 
         self.device = device
-        self.enc_layers = enc_layers
-        self.hidden_dim = hidden_dim
         self.input_dim = input_dim #src_vocab_sz
-        self.enc_embed_dim = enc_embed_dim
+        self.enc_layers = layers
+        self.enc_directions = 2 if bidirectional else 1
+        self.enc_hidden_dim = hidden_dim
+        self.enc_embed_dim = embed_dim
         self.embedding = nn.Embedding(self.input_dim, self.enc_embed_dim)
-        self.gru = nn.GRU(input_size= self.enc_embed_dim,
-                          hidden_size= self.hidden_dim,
-                          num_layers= self.enc_layers,)
+        self.enc_gru = nn.GRU(input_size= self.enc_embed_dim,
+                          hidden_size= self.enc_hidden_dim,
+                          num_layers= self.enc_layers,
+                          bidirectional= bidirectional)
 
-    def forward(self, x, x_sz):
+    def forward(self, x, x_sz, hidden = None):
         """
         src_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
         """
@@ -26,8 +28,10 @@ class Encoder(nn.Module):
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
 
-        # hidden: n_layer, batch_size, hidden_dim
-        hidden = torch.zeros((self.enc_layers, batch_sz, self.hidden_dim)).to(self.device)
+        if not hidden:
+            # hidden: n_layer*num_directions, batch_size, hidden_dim
+            hidden = torch.zeros((self.enc_layers** self.enc_directions, batch_sz,
+                        self.enc_hidden_dim )).to(self.device)
 
         ## pack the padded data
         # x: max_length, batch_size, enc_embed_dim -> for pack_pad
@@ -35,8 +39,8 @@ class Encoder(nn.Module):
         x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, batch_size, enc_embed_dim
-        # hidden: n_layer, batch_size, hidden_dim
-        output, hidden = self.gru(x, hidden) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        # hidden: n_layer, batch_size, hidden_dim*num_directions
+        output, hidden = self.enc_gru(x, hidden) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, hidden_dim)
@@ -51,36 +55,40 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, output_dim, dec_embed_dim, hidden_dim,
-                       dec_layers = 1, dec_dropout = 0,
+    def __init__(self, output_dim, embed_dim, hidden_dim,
+                       layers = 1, dropout = 0,
+                       enc_outstate_dim = None, # enc_directions *enc_hidden_dim
                        device = "cpu"):
         super(Decoder, self).__init__()
 
         self.device = device
-        self.hidden_dim = hidden_dim
         self.output_dim = output_dim #tgt_vocab_sz
-        self.dec_embed_dim = dec_embed_dim
-        self.dec_layers = dec_layers
+        self.dec_hidden_dim = hidden_dim
+        self.dec_embed_dim = embed_dim
+        self.dec_layers = layers
+        self.enc_outstate_dim = enc_outstate_dim if enc_outstate_dim else hidden_dim
+
         self.embedding = nn.Embedding(self.output_dim, self.dec_embed_dim)
-        self.gru = nn.GRU(input_size= self.dec_embed_dim + self.hidden_dim,
-                          hidden_size= self.hidden_dim,
+        self.gru = nn.GRU(input_size= self.dec_embed_dim + self.enc_outstate_dim, # to concat attention_output
+                          hidden_size= self.dec_hidden_dim, # previous Hidden
                           num_layers= self.dec_layers,
                           batch_first = True )
         self.fc = nn.Sequential(
-            nn.Linear(self.hidden_dim, self.dec_embed_dim), nn.LeakyReLU(),
-            nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.LeakyReLU(),
+            nn.Linear(self.dec_hidden_dim, self.dec_embed_dim), nn.LeakyReLU(),
+            # nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.LeakyReLU(), # removing to reduce size
             nn.Linear(self.dec_embed_dim, self.output_dim),
             )
 
         ##----- Attention ----------
-        self.W1 = nn.Linear( self.hidden_dim, self.hidden_dim)
-        self.W2 = nn.Linear( self.hidden_dim, self.hidden_dim)
-        self.V = nn.Linear( self.hidden_dim, 1)
+
+        self.W1 = nn.Linear( self.enc_outstate_dim, self.dec_hidden_dim)
+        self.W2 = nn.Linear( self.dec_hidden_dim, self.dec_hidden_dim)
+        self.V = nn.Linear( self.dec_hidden_dim, 1)
 
     def attention(self, x, hidden, enc_output):
         '''
         x: (batch_size, 1, dec_embed_dim) -> after Embedding
-        enc_output: batch_size, max_length, hidden_dim
+        enc_output: batch_size, max_length, enc_hidden_dim *num_directions
         hidden: n_layers, batch_size, hidden_size
         '''
 
@@ -106,14 +114,13 @@ class Decoder(nn.Module):
 
         # attend_out (batch_size, 1, dec_embed_dim + hidden_size)
         attend_out = torch.cat((context_vector, x), -1)
-
         return attend_out
 
     def forward(self, x, hidden, enc_output):
         '''
         x: (batch_size, 1)
         enc_output: batch_size, max_length, dec_embed_dim
-        hidden: 1, batch_size, hidden_size
+        hidden: n_layer, batch_size, hidden_size
         '''
 
         # x (batch_size, 1, dec_embed_dim) -> after embedding
@@ -123,8 +130,8 @@ class Decoder(nn.Module):
         x = self.attention( x, hidden, enc_output)
 
         # passing the concatenated vector to the GRU
-        # output: (batch_size, 1, hidden_size)
-        # hidden: 1, batch_size, hidden_size
+        # output: (batch_size, n_layers, hidden_size)
+        # hidden: n_layers, batch_size, hidden_size
         output, hidden = self.gru(x, hidden)
 
         # output shape == (batch_size * 1, hidden_size)
@@ -143,8 +150,30 @@ class Seq2Seq(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.device = device
-        assert self.decoder.dec_layers == self.encoder.enc_layers
-        assert self.decoder.hidden_dim == self.encoder.hidden_dim
+
+        assert decoder.enc_outstate_dim == encoder.enc_directions*encoder.enc_hidden_dim,"Set `enc_out_dim` correctly in decoder"
+        assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Size of encoder and decoder must be same, currently"
+
+        #TODO: Support Different Hidden_size for Enc&Dec; Modify the ConvLayer to facilitate
+        self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
+        self.dec_hid_1ax = decoder.dec_layers
+        self.e2d_hidden_conv = nn.Conv1d(self.enc_hid_1ax, self.dec_hid_1ax, 1)
+
+    def enc2dec_hidden(self, enc_hidden):
+        """
+        enc_hidden: n_layer, batch_size, hidden_dim*num_directions
+        """
+        batch_sz = enc_hidden.shape[1]
+        # hidden: batch_size, enc_layer*num_directions, enc_hidden_dim
+        hidden = enc_hidden.permute(1,0,2).contiguous()
+        # hidden: batch_size, dec_layers, dec_hidden_dim -> [N,C,Tstep]
+        hidden = self.e2d_hidden_conv(hidden)
+
+        # hidden: dec_layers, batch_size , dec_hidden_dim
+        hidden_for_dec = hidden.permute(1,0,2).contiguous()
+
+        return hidden_for_dec
+
 
     def forward(self, src, tgt, src_sz, tgt_sz, teacher_forcing_ratio = 0):
         '''
@@ -152,13 +181,13 @@ class Seq2Seq(nn.Module):
         tgt: (batch_size, sequence_len.padded)
         src_sz: [batch_size, 1] -  Unpadded sequence lengths
         '''
+        batch_size = tgt.shape[0]
 
-        # enc_output: (batch_size, max_length, hidden_dim)
-        # enc_hidden: (batch_size, hidden_dim)
+        # enc_output: (batch_size, padded_seq_length, enc_hidden_dim*num_direction)
+        # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src, src_sz)
 
-        batch_size = tgt.shape[0]
-        dec_hidden = enc_hidden
+        dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         # pred_vecs: (batch_size, output_dim, sequence_sz) -> shape required for CELoss
         pred_vecs = torch.zeros(batch_size, self.decoder.output_dim, tgt.size(1)).to(self.device)
@@ -197,7 +226,7 @@ class Seq2Seq(nn.Module):
         src_ = src.unsqueeze(0)
 
         enc_output, enc_hidden = self.encoder(src_, src_sz)
-        dec_hidden = enc_hidden
+        dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
         # dec_input: (batch_size, 1)
