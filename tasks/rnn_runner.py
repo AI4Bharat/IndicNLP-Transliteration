@@ -29,7 +29,7 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 1024
+batch_size = 3
 acc_grad = 1
 learning_rate = 1e-4
 teacher_forcing, teach_force_till = 0.50, 3
@@ -54,20 +54,26 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 256
-dec_emb_dim = 256
-hidden_dim = 512
-n_layers = 3
+enc_emb_dim = 64
+dec_emb_dim = 64
+enc_hidden_dim = 256
+dec_hidden_dim = 256
+enc_layers = 2
+dec_layers = 3
 m_dropout = 0
+enc_bidirect = True
+enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
 
-enc = Encoder(  input_dim= input_dim, enc_embed_dim = enc_emb_dim,
-                hidden_dim= hidden_dim,
-                enc_layers= n_layers,
-                enc_dropout= m_dropout, device = device)
-dec = Decoder(  output_dim= output_dim, dec_embed_dim = dec_emb_dim,
-                hidden_dim= hidden_dim,
-                dec_layers= n_layers,
-                dec_dropout= m_dropout,  device = device)
+enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
+                hidden_dim= enc_hidden_dim,
+                layers= enc_layers,
+                dropout= m_dropout, device = device,
+                bidirectional= enc_bidirect)
+dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
+                hidden_dim= dec_hidden_dim,
+                layers= dec_layers,
+                dropout= m_dropout,  device = device,
+                enc_outstate_dim= enc_outstate_dim)
 
 model = Seq2Seq(enc, dec, device=device)
 model = model.to(device)
