@@ -60,12 +60,12 @@ def inference_looper(in_words):
     return out_dict
 
 ROOT_PATH= ""
-SAVE_DIR = "tools/accuracy_reporter/temp-exp1"
+SAVE_DIR = "tools/accuracy_reporter/temp-train105"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 files = [
-    # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_fire13_dev.json",
     ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_news18_dev.json",
+    ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_fire13_dev.json",
     # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_varnam_test.json",
     # ROOT_PATH+"tools/accuracy_reporter/temp-data/EnHi_varnam_special_test.json",
 ]
@@ -80,10 +80,9 @@ if __name__ == "__main__":
 
         gt_json = fi
         pred_json = sv_path
+
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
         run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --save-output-csv {}_scores.csv".format(
                         gt_json, pred_json, save_prefix)
 
         os.system(run_accuracy_news)
-
-
