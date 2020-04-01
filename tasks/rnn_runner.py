@@ -94,8 +94,8 @@ def loss_estimator(pred, truth):
     """ Only consider non-zero inputs in the loss; mask needed
     pred: batch
     """
-    # pred = pred[:,:,1:]
-    # truth = truth[:,1:]
+    pred = pred[:,:,1:]
+    truth = truth[:,1:]
     mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
