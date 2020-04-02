@@ -1,4 +1,6 @@
 import sys
+import os
+import random
 from torch.utils.data import Dataset
 import numpy as np
 
@@ -29,7 +31,6 @@ class GlyphStrawboss():
         elif lang in ['hi']: #TODO: Move misc to last
             self.glyphs = devanagari_scripts + indoarab_numeric + misc_chars
 
-        self.glyph_size = len(self.glyphs)
         self.char2idx = {}
         self.idx2char = {}
         self._create_index()
@@ -39,6 +40,9 @@ class GlyphStrawboss():
         self.char2idx['_'] = 0  #pad
         self.char2idx['$'] = 1  #start
         self.char2idx['#'] = 2  #end
+        self.char2idx['*'] = 3  #Mask
+        self.char2idx['&'] = 4  #unused
+        self.char2idx['%'] = 5  #unused
 
         # letter to index mapping
         for idx, char in enumerate(self.glyphs):
@@ -77,7 +81,7 @@ class GlyphStrawboss():
             char_list.append(self.idx2char[i])
 
         word = "".join(char_list).replace('$','').replace('#','') # remove tokens
-        word = word.replace("_", "")
+        word = word.replace("_", "").replace('*','') # remove tokens
         return word
 
 
@@ -158,3 +162,81 @@ class XlitData(Dataset):
         return padded
 
 
+class MonoLMData(Dataset):
+    """ Monolingual dataloader for Language Model
+    CSV or txt (or) if JSON keys used
+    depends on: Numpy, Pandas, random
+    """
+    def __init__(self, glyph_obj, data_file,
+                    padding = True, mask_ratio = 0.3, # ratio of characters to be masked
+                 ):
+        """
+        padding: Set True if Padding with zeros is required for Batching
+        """
+        extension = os.path.splitext(data_file)[-1]
+        if extension == ".json":
+            src_lst = self._json2_x(data_file)
+        elif extension == ".txt" or extension == ".csv":
+            src_lst = self._csv2_x(data_file, extension)
+        else:
+            raise Exception('Unknown File Extension')
+
+
+        self.glyph_obj = glyph_obj
+        self.mask_ratio = mask_ratio
+        self.padding = padding
+        #TODO: If memory insufficient for dataset move word2xlitvec to __getitem__
+        __svec = self.glyph_obj.word2xlitvec
+        self.src = [ __svec(s) for s in src_lst]
+        self.mask_idx = glyph_obj.char2idx['*']
+        self.max_seq_size = max(len(t) for t in self.src) #s_tok, e_tok
+
+    def __getitem__(self, index):
+        x_sz = len(self.src[index])
+        x = self.src[index]
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        x_mkd = self._rand_seq_mask(x.copy(), x_sz)
+
+        return x_mkd, x, x_sz
+
+    def __len__(self):
+        return len(self.src)
+
+    def _rand_seq_mask(self, arr, arr_sz):
+        m_seq = random.sample(range(1, arr_sz), int(arr_sz*self.mask_ratio) )
+        arr[m_seq] = self.mask_idx
+        return arr
+
+    def _pad_sequence(self, x, max_len):
+        """ Pad sequence to maximum length;
+        Pads zero if word < max
+        Clip word if word > max
+        """
+        padded = np.zeros((max_len), dtype=NP_TYPE)
+        if len(x) > max_len: padded[:] = x[:max_len]
+        else: padded[:len(x)] = x
+        return padded
+
+    def _json2_x(self, json_file):
+        ''' Read Mono data from JSON lang pairs
+        '''
+        import json
+        with open(json_file, 'r', encoding = "utf-8") as f:
+            data = json.load(f)
+        x = set()
+        for k in data:
+            x.add(k)
+        return list(x)
+
+    def _csv2_x(self, csv_file, extension = None):
+        ''' Read Mono data from csv/txt
+        Assumed that .txt will not have column header
+        '''
+        import pandas
+        if extension == ".txt":
+            df = pandas.read_csv(csv_file, header = None)
+        else:
+            df = pandas.read_csv(csv_file)
+        x = df.iloc[:,0]
+        return list(x)
