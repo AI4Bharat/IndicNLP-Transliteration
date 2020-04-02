@@ -126,7 +126,7 @@ class XlitData(Dataset):
         else:
             x = self.src[index]
             y = self.tgt[index]
-        return x,y, x_sz, y_sz
+        return x,y, x_sz
 
     def __len__(self):
         return len(self.src)
