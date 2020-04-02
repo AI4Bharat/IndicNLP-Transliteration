@@ -175,7 +175,7 @@ class Seq2Seq(nn.Module):
         return hidden_for_dec
 
 
-    def forward(self, src, tgt, src_sz, tgt_sz, teacher_forcing_ratio = 0):
+    def forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
         '''
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)

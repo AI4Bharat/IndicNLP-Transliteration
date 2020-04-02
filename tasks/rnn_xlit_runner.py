@@ -1,4 +1,4 @@
-'''
+''' RNN Seq2Seq (Encoder-Decoder) training setup
 '''
 
 import torch
@@ -117,13 +117,14 @@ if __name__ =="__main__":
         running_loss = []
         if epoch >= teach_force_till: teacher_forcing = 0
 
-        for ith, (src, tgt, src_sz, tgt_sz) in enumerate(train_dataloader):
+        for ith, (src, tgt, src_sz) in enumerate(train_dataloader):
 
             src = src.to(device)
             tgt = tgt.to(device)
 
             #--- forward ------
-            output = model(src, tgt, src_sz, teacher_forcing)
+            output = model(src = src, tgt = tgt, src_sz =src_sz,
+                            teacher_forcing_ratio = teacher_forcing)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
 
@@ -144,11 +145,11 @@ if __name__ =="__main__":
         model.eval()
         val_loss = 0
         val_accuracy = 0
-        for jth, (v_src, v_tgt, v_src_sz, v_tgt_sz) in enumerate(tqdm(val_dataloader)):
+        for jth, (v_src, v_tgt, v_src_sz) in enumerate(tqdm(val_dataloader)):
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
-                v_output = model(v_src, v_tgt, v_src_sz, v_tgt_sz)
+                v_output = model(src = v_src, tgt = v_tgt, src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
                 val_accuracy += (1 - val_loss)
