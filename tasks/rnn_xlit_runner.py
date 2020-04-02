@@ -25,25 +25,32 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================
 
-src_glyph = GlyphStrawboss("en")
+src_glyph = GlyphStrawboss("hi")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
 batch_size = 3
 acc_grad = 1
 learning_rate = 1e-4
-teacher_forcing, teach_force_till = 0.50, 3
+teacher_forcing, teach_force_till = 0.50, 2
 pretrain_wgt_path = None
 
-train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+# train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
+#                         json_file='data/checkup-train.json', file_map = "LangEn",
+#                         padding=True)
+
+train_dataset = MonoLMData(glyph_obj = src_glyph,
+                        data_file='data/mono/hindi_words_varnam.csv',
                         padding=True)
+
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-test.json', file_map = "LangEn",
-                        padding=True)
+# val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
+#                         json_file='data/checkup-test.json', file_map = "LangEn",
+#                         padding=True)
+
+val_dataset = train_dataset
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
