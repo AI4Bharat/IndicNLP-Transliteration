@@ -7,7 +7,7 @@ import os
 import sys
 from tqdm import tqdm
 import utilities.running_utils as rutl
-from utilities.lang_data_utils import XlitData, GlyphStrawboss
+from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
@@ -107,7 +107,7 @@ def loss_estimator(pred, truth):
     loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
                              weight_decay=1e-5)
 
 

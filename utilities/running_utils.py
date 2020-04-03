@@ -1,4 +1,5 @@
 import enum
+import torch
 
 class RunMode(enum.Enum):
     train = "training"
