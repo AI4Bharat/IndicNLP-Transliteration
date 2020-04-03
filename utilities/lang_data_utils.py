@@ -46,7 +46,7 @@ class GlyphStrawboss():
 
         # letter to index mapping
         for idx, char in enumerate(self.glyphs):
-            self.char2idx[char] = idx + 3 # +3 token initially
+            self.char2idx[char] = idx + 6 # +6 token initially
 
         # index to letter mapping
         for char, idx in self.char2idx.items():
