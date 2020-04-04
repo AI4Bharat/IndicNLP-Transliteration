@@ -144,7 +144,7 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, device,):
+    def __init__(self, encoder, decoder, dropout = 0, device = "cpu"):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
