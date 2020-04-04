@@ -7,15 +7,20 @@ import numpy as np
 NP_TYPE = np.int64
 
 ##====== Unicodes ==============================================================
-
-
+'''
+Note: Replace dummy chars for adding new characters
+      Don't change the order of the Characters in lists
+'''
 indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
-english_smallcase = [chr(alpha) for alpha in range(97, 123)]
-devanagari_scripts =  [chr(alpha) for alpha in range(2304, 2432)]
 
-misc_chars = [ # ! Don't Change the sequence order
-    chr(8204), # ZeroWidth-NonJoiner U+200c
-    chr(8205), # ZeroWidthJoiner U+200d
+english_smallcase = [chr(alpha) for alpha in range(97, 123)] + [
+    "'",         # apostrophe U+0027
+    chr(0x2654),chr(0x2655),chr(0x2656),chr(0x2657),chr(0x2658),chr(0x2659), # Dummy placeholder for future addition
+]
+devanagari_scripts =  [chr(alpha) for alpha in range(2304, 2432)] + [
+    chr(0x200c), # ZeroWidth-NonJoiner U+200c
+    chr(0x200d), # ZeroWidthJoiner U+200d
+    chr(0x265a),chr(0x265b),chr(0x265c),chr(0x265e),chr(0x265e),chr(0x265f), # Dummy placeholders for future addition
 ]
 
 #-------------------------------------------------------------------------------
@@ -27,9 +32,9 @@ class GlyphStrawboss():
         """
         self.lang = lang
         if lang == 'en':
-            self.glyphs = english_smallcase + indoarab_numeric
+            self.glyphs = indoarab_numeric + english_smallcase
         elif lang in ['hi']: #TODO: Move misc to last
-            self.glyphs = devanagari_scripts + indoarab_numeric + misc_chars
+            self.glyphs = indoarab_numeric + devanagari_scripts
 
         self.char2idx = {}
         self.idx2char = {}
@@ -43,10 +48,10 @@ class GlyphStrawboss():
         self.char2idx['*'] = 3  #Mask
         self.char2idx['&'] = 4  #unused
         self.char2idx['%'] = 5  #unused
-
+        self.char2idx['!'] = 6  #unused
         # letter to index mapping
         for idx, char in enumerate(self.glyphs):
-            self.char2idx[char] = idx + 6 # +6 token initially
+            self.char2idx[char] = idx + 7 # +6 token initially
 
         # index to letter mapping
         for char, idx in self.char2idx.items():
@@ -83,8 +88,6 @@ class GlyphStrawboss():
         word = "".join(char_list).replace('$','').replace('#','') # remove tokens
         word = word.replace("_", "").replace('*','') # remove tokens
         return word
-
-
 
 
 
