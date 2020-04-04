@@ -2,6 +2,10 @@ import os
 import sys
 import json
 
+def save_to_json(path, data_dict):
+    with open(path ,"w", encoding = "utf-8") as f:
+        json.dump(data_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+
 def toggle_json_xlit(read_path, save_prefix=""):
     with open(read_path, 'r', encoding = "utf-8") as f:
         data = json.load(f)
@@ -42,12 +46,8 @@ def get_from_json_xlit(path, ret_data = "key"):
 
     return sorted(out)
 
-def save_to_json(path, data_dict):
-    with open(path ,"w", encoding = "utf-8") as f:
-        json.dump(data_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
-
-def convert_ezann_to_xlit(file_path):
+def convert_ezann_to_xlit(file_path, save_path = ""):
     """
     String Processing:
     1.Converts upper to lower case
@@ -70,13 +70,39 @@ def convert_ezann_to_xlit(file_path):
     for d in out_dict:
         out_dict[d] = list(out_dict[d])
 
-    save_path = os.path.dirname(file_path)
-    with open(save_path+"/out_xlit_format.json" ,"w", encoding = "utf-8") as f:
+    with open(save_path+"out_xlit_format.json" ,"w", encoding = "utf-8") as f:
         json.dump(out_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
 
+def merge_xlit_jsons(filepath_list, save_path = ""):
+
+    data_list = []
+    for fpath in filepath_list:
+        with open(fpath, 'r', encoding = "utf-8") as f:
+            data_list.append(json.load(f))
+
+    whole_dict = dict()
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk] = set()
+
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk].update(dat[dk])
+
+    for k in whole_dict:
+        whole_dict[k] = list(whole_dict[k])
+
+    with open(save_path+"merged_file.json","w", encoding = "utf-8") as f:
+        json.dump(whole_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
 if __name__ == "__main__":
 
     # convert_ezann_to_xlit("/home/jgeob/Downloads/Konkani_Literation_A_complete.json")
+
+    # ## Merge JSON
+    # files = ["/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/HiEn_fire13_train.json",
+    # "/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/HiEn_news18_train.json"]
+
+    # merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/')
     pass
