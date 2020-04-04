@@ -49,6 +49,7 @@ class GlyphStrawboss():
         self.char2idx['&'] = 4  #unused
         self.char2idx['%'] = 5  #unused
         self.char2idx['!'] = 6  #unused
+
         # letter to index mapping
         for idx, char in enumerate(self.glyphs):
             self.char2idx[char] = idx + 7 # +6 token initially
