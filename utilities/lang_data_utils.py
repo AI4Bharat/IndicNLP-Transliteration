@@ -101,10 +101,12 @@ class XlitData(Dataset):
     """
     def __init__(self, src_glyph_obj, tgt_glyph_obj,
                     json_file, file_map = "LangEn",
-                    padding = True,
+                    padding = True, max_seq_size = None,
                  ):
         """
         padding: Set True if Padding with zeros is required for Batching
+        max_seq_size: Size for Padding both input and output, Longer words will be truncated
+                      If unset computes maximum of source, target seperate
         """
         #Load data
         if file_map == "LangEn":
@@ -121,9 +123,14 @@ class XlitData(Dataset):
         __tvec = self.tgt_glyph.word2xlitvec
         self.src = [ __svec(s)  for s in src_str]
         self.tgt = [ __tvec(s)  for s in tgt_str]
+
         self.padding = padding
-        self.max_src_size = max(len(t) for t in self.src)
-        self.max_tgt_size = max(len(t) for t in self.tgt)
+        if max_seq_size:
+            self.max_tgt_size = max_seq_size
+            self.max_src_size = max_seq_size
+        else:
+            self.max_src_size = max(len(t) for t in self.src)
+            self.max_tgt_size = max(len(t) for t in self.tgt)
 
     def __getitem__(self, index):
         x_sz = len(self.src[index])
