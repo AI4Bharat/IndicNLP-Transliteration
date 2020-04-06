@@ -9,7 +9,7 @@ from tqdm import tqdm
 import utilities.running_utils as rutl
 from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData
 from utilities.logging_utils import LOG2CSV
-from algorithms.transformer_nets import XFMR_Seq2Seq
+from algorithms.transformer_nets import XFMR_Neophyte
 
 
 ##===== Init Setup =============================================================
@@ -29,21 +29,22 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 1
+batch_size = 3
 acc_grad = 1
 learning_rate = 1e-4
 pretrain_wgt_path = None
+max_char_size = 50
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file='data/checkup-train.json', file_map = "LangEn",
-                        padding=True)
+                        padding=True, max_seq_size=max_char_size)
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file='data/checkup-test.json', file_map = "LangEn",
-                        padding=True)
+                        padding=True, max_seq_size=max_char_size)
 
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -56,15 +57,14 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
 emb_vec_dim = 512
-enc_layers = 2
-dec_layers = 4
+n_layers = 6
 attention_head = 8
 feedforward_dim = 1024
 m_dropout = 0
 
-model = XFMR_Seq2Seq(input_vcb_sz = input_dim, output_vcb_sz = output_dim,
+model = XFMR_Neophyte(input_vcb_sz = input_dim, output_vcb_sz = output_dim,
                     emb_dim = emb_vec_dim,
-                    enc_layers = enc_layers, dec_layers = dec_layers,
+                    n_layers = n_layers,
                     attention_head = attention_head, feedfwd_dim = feedforward_dim,
                     dropout = 0,
                     device = device)
@@ -114,7 +114,7 @@ if __name__ =="__main__":
             tgt = tgt.to(device)
 
             #--- forward ------
-            output = model(src = src, tgt = tgt)
+            output = model(src = src)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
 
@@ -139,7 +139,7 @@ if __name__ =="__main__":
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
-                v_output = model(src = v_src, tgt = v_tgt)
+                v_output = model(src = v_src)
                 val_loss += loss_estimator(v_output, v_tgt)
 
                 val_accuracy += (1 - val_loss)
