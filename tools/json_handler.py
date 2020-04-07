@@ -46,6 +46,28 @@ def get_from_json_xlit(path, ret_data = "key"):
 
     return sorted(out)
 
+def merge_xlit_jsons(filepath_list, save_path = ""):
+
+    data_list = []
+    for fpath in filepath_list:
+        with open(fpath, 'r', encoding = "utf-8") as f:
+            data_list.append(json.load(f))
+
+    whole_dict = dict()
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk] = set()
+
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk].update(dat[dk])
+
+    for k in whole_dict:
+        whole_dict[k] = list(whole_dict[k])
+
+    with open(save_path+"merged_file.json","w", encoding = "utf-8") as f:
+        json.dump(whole_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+
 
 def convert_ezann_to_xlit(file_path, save_path = ""):
     """
@@ -74,27 +96,28 @@ def convert_ezann_to_xlit(file_path, save_path = ""):
         json.dump(out_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
 
-def merge_xlit_jsons(filepath_list, save_path = ""):
+def xlitjson_to_mosestxt(read_file, save_prefix = "moses_format"):
+    """ For Converting JSON to Moses-SMT input file format of Trasliteration data
+        (Character level spliting for Transliteration)
+    """
+    def char_token(word):
+        unis = list(word)
+        outword = ""
+        for u in unis:
+            outword += u+" "
+        return outword[:-1]
+    #--------------------------------
 
-    data_list = []
-    for fpath in filepath_list:
-        with open(fpath, 'r', encoding = "utf-8") as f:
-            data_list.append(json.load(f))
+    with open(read_file) as f:
+        data_dict = json.load(f)
 
-    whole_dict = dict()
-    for dat in data_list:
-        for dk in dat:
-            whole_dict[dk] = set()
-
-    for dat in data_list:
-        for dk in dat:
-            whole_dict[dk].update(dat[dk])
-
-    for k in whole_dict:
-        whole_dict[k] = list(whole_dict[k])
-
-    with open(save_path+"merged_file.json","w", encoding = "utf-8") as f:
-        json.dump(whole_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+    sr_file = open(save_prefix+".sr", "w")
+    tg_file = open(save_prefix+".tg", "w")
+    for key in data_dict.keys():
+        for word in data_dict[key]:
+            sr_file.write(char_token(key)+"\n")
+            tg_file.write(char_token(word)+"\n")
+    print("Complete Creating Translit-Moses Format")
 
 if __name__ == "__main__":
 
@@ -105,4 +128,7 @@ if __name__ == "__main__":
     # "/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/HiEn_news18_train.json"]
 
     # merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/')
+
+    ##
+    # xlitjson_to_mosestxt("data/konkani/KnkEn_ann1_test.json")
     pass
