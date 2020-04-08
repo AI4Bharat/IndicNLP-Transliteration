@@ -114,3 +114,29 @@ class XFMR_Neophyte(nn.Module):
         out = out.permute(0,2,1).contiguous()
 
         return out
+
+    def inference(self, x, max_seq_size = 50):
+
+        # inp: (1, max-seq_size)
+        inp = torch.zeros(1, max_seq_size, dtype= torch.long).to(self.device)
+        inp[0, 0:x.shape[0] ] = x
+
+        # src_emb: (1, in_seq_len, vector_dim)
+        src_emb = self.in2embed(inp)
+
+        # src_emb: (seq_len,1,vector_dim) -> for transformer
+        src_emb = src_emb.permute(1,0,2)
+
+        # out: (max_seq_len,1,vector_dim)
+        out = self.xfmr_enc(src_emb)
+
+        # out: (1, max_seq_len, vector_dim)
+        out = out.permute(1,0,2).contiguous()
+
+        # out: (1, max_seq_len, out_vcb_dim)
+        out = self.out_fc(out)
+        # prediction: ( max_seq_len )
+        prediction = torch.argmax(out, dim=2).squeeze()
+
+        return prediction
+
