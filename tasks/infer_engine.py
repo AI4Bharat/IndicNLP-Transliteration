@@ -10,12 +10,12 @@ weight_path = "hypotheses/training_98/Training_98_model-348.pth"
 # load Model from source_files itself
 
 weights = torch.load( weight_path, map_location=torch.device('cpu'))
-rnn_model.load_state_dict(weights)
-rnn_model.eval()
+model.load_state_dict(weights)
+model.eval()
 
 def inferencer(word):
     in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
-    out = rnn_model.inference(in_vec)
+    out = model.inference(in_vec)
     result = hi_glyph.xlitvec2word(out.numpy())
     return [result]
 
