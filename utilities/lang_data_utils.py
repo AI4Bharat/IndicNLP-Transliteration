@@ -33,7 +33,7 @@ class GlyphStrawboss():
         self.lang = lang
         if lang == 'en':
             self.glyphs = indoarab_numeric + english_smallcase
-        elif lang in ['hi', 'knk']: #TODO: Move misc to last
+        elif lang in ['hi', 'knk']:
             self.glyphs = indoarab_numeric + devanagari_scripts
 
         self.char2idx = {}

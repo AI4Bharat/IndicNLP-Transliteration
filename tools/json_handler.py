@@ -22,7 +22,7 @@ def toggle_json_xlit(read_path, save_prefix=""):
     for t in tog_dict.keys():
         tog_dict[t] = list(tog_dict[t])
 
-    save_file = save_prefix+"Toggled-"+ os.path.basename(path)
+    save_file = save_prefix+"Toggled-"+ os.path.basename(read_path)
     with open(save_file,"w", encoding = "utf-8") as f:
         json.dump(tog_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
