@@ -5,8 +5,8 @@ en_glyph = GlyphStrawboss("en")
 
 ##============ RNN Based =======================================================
 import torch
-from hypotheses.training_98.recurrent_nets_98 import rnn_model
-weight_path = "hypotheses/training_98/Training_98_model-348.pth"
+from hypotheses.training_85.recurrent_nets_85 import model
+weight_path = "hypotheses/training_85/Training_85_model.pth"
 # load Model from source_files itself
 
 weights = torch.load( weight_path, map_location=torch.device('cpu'))
