@@ -1,6 +1,7 @@
 .vscode
 data/*
 hypotheses/*
+bin
 logs
 *.log
 temp*
