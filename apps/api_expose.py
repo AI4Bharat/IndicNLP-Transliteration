@@ -2,85 +2,87 @@
 Expose Transliteration Engine as an HTTP API.
 
 USAGE:
-    Example 1: Running on port 80
-    $ sudo env PATH=$PATH python3 api_expose.py
+    1. $ sudo env PATH=$PATH python3 api_expose.py
+    2. Run in browser: http://localhost:8000/tl/hi/a
 """
 
 from flask import Flask, jsonify, request
 from datetime import datetime
-from utilities.lang_utils import code2lang, get_lang_chars
-from utilities.config import load_and_validate_cfg
-from utilities.constants import DEFAULT_CONFIG, BEST_MODEL_FILE
-import traceback, torch
+import traceback
+import os
+import sys
+import enum
 
-LANGS = ['hi']
-MODELS_PATH = 'hypotheses/api'
+class XlitError(enum.Enum):
+    lang_err = "Unsupported langauge ID requested"
+    string_err = "String passed is incompatable"
+    internal_err = "Internal crash ;("
+    unknown_err = "Unknown Failure"
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
-SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
-            '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
-engine = None
+## Set in order to host in specific domain
+SSL_FILES = None
+'''
+SSL_FILES = ('/etc/letsencrypt/live/domain.com/fullchain.pem',
+            '/etc/letsencrypt/live/domain.com/privkey.pem')
+'''
 
-class InferenceManager:
-    def __init__(self, models_path):
-        self.init_eng()
-        self.init_lang()
-        self.models_path = models_path
-        self.load_models(models_path)
-        
-    def load_models(self, models_path):
-        from algorithms.seq2seq import EncoderDecoder
-        from algorithms.model_manager import Xlit_ModelMgr
-        self.models = {}
-        for lang in LANGS:
-            cfg = load_and_validate_cfg('%s/%s/%s' % (models_path, lang, DEFAULT_CONFIG))
-            ckpt_path = '%s/%s/%s' % (models_path, lang, BEST_MODEL_FILE)
-            net = EncoderDecoder(cfg.model, self.eng_alpha2index, self.lang_alpha2index[lang])
-            net.load_state_dict(torch.load(ckpt_path))
-            self.models['hi'] = Xlit_ModelMgr(net, self.eng_alpha2index, self.lang_alpha2index[lang])
-    
-    def init_eng(self):
-        self.eng_alphabets = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        self.start_char, self.end_char, self.pad_char = '$', '#', '*'
-        self.eng_alpha2index = {self.pad_char: 0, self.start_char: 1, self.end_char: 2}
-        for index, alpha in enumerate(self.eng_alphabets):
-            self.eng_alpha2index[alpha] = index + 3
-    
-    def init_lang(self):
-        self.lang_alphabets = {}
-        self.lang_alpha2index = {}
-        for lang in LANGS:
-            self.lang_alphabets[lang] = get_lang_chars(code2lang[lang])
-            self.lang_alpha2index[lang] = {self.pad_char: 0, self.start_char: 1, self.end_char: 2}
-            for index, alpha in enumerate(self.lang_alphabets[lang]):
-                self.lang_alpha2index[lang][alpha] = index + 3
-    
-    def xlit(self, lang_code, eng_word):
-        return [self.models[lang_code].infer(eng_word.upper())]
-    
-@app.route('/tl/<lang_code>/<eng_word>', methods = ['GET', 'POST']) 
-def varnam_xlit(lang_code, eng_word): 
+@app.route('/tl/<lang_code>/<eng_word>', methods = ['GET', 'POST'])
+def ai4bharat_xlit(lang_code, eng_word):
     response = {
-        'success': True,
-        'error': '',
+        'success': False,
+        'error': 'Unknown',
         'at': str(datetime.utcnow()) + ' +0000 UTC',
-        'input': eng_word
+        'input': eng_word,
+        'result': ''
     }
-    if lang_code not in code2lang:
-        response['error'] = 'Invalid scheme identifier'
-        response['success'] = False
+
+    if lang_code not in engine.langs:
+        response['error'] = 'Invalid scheme identifier. Supported languages are'+ str(engine.langs)
         return jsonify(response)
+
     try:
-        response['result'] = engine.xlit(lang_code, eng_word)
+        xlit_result = engine.transliterate(lang_code, eng_word)
     except Exception as e:
-        response['error'] = 'Man you crashed me ;('
-        response['success'] = False
-        # TODO: Save crashes to logs
+        xlit_result = XlitError.internal_err
         print(traceback.format_exc())
+
+
+    if isinstance(xlit_result, XlitError):
+        response['error'] = xlit_result.value
+        print(traceback.format_exc())
+    else:
+        response['result'] = xlit_result
+        response['success'] = True
+
     return jsonify(response)
 
-if __name__ == '__main__': 
-    engine = InferenceManager(MODELS_PATH)
-    app.run(debug=True, host='0.0.0.0', port=443, ssl_context=SSL_FILES) 
+##------------------------------------------------------------------------------
+
+BASEPATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(BASEPATH)
+
+class XlitEngine():
+    def __init__(self):
+        self.langs = ["hi"]
+
+        from bin.hindi.program85 import inference_engine as hindi_engine
+        self.hindi_engine = hindi_engine
+
+    def transliterate(self, lang_code, eng_word):
+        try:
+            if lang_code == "hi":
+                return self.hindi_engine(eng_word)
+            else:
+                print("Unknown Langauge")
+                return XlitError.lang_err
+        except:
+            return XlitError.unknown_err
+
+
+
+if __name__ == '__main__':
+    engine = XlitEngine()
+    app.run(debug=True, host='0.0.0.0', port=8000)
