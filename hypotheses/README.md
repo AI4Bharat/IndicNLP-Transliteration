@@ -1,6 +1,6 @@
 #Hypotheses & Weights
 
-:warning: Conents of this folder will not be commited.
+:warning: Contents of this folder will not be commited.
 Folder for storing <br>
 * Learned parameters <br>
 * Weights of Neuralnets <br>
