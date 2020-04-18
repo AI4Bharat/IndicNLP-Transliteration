@@ -139,7 +139,7 @@ def write_details(output_fname, input_data, test_data, acc, f, f_best_match, mrr
     '''
     f_out = open(output_fname, 'w', encoding='utf-8')
 
-    f_out.write('%s\n' % (','.join(['"Source word"', '"First candidate"', '"Top-1"', '"ACC"', '"F-score"', '"Best matching reference"',
+    f_out.write('%s\n' % (','.join(['"Source word"', '"Top-1"', '"ACC"', '"F-score"', '"Best matching reference"',
     '"MRR"', '"MAP_ref"', '"References"'])))
 
     for src_word in test_data.keys():

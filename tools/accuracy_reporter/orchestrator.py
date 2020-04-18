@@ -85,7 +85,7 @@ if __name__ == "__main__":
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
         ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
-        run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --save-output-csv {}_scores.csv".format(
-                        gt_json, pred_json, save_prefix)
+        run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --save-output-csv {}_scores.csv | tee -a {}/Summary.txt".format(
+                        gt_json, pred_json, save_prefix, SAVE_DIR )
 
         os.system(run_accuracy_news)
