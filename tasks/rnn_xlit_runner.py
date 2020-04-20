@@ -117,6 +117,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
 if __name__ =="__main__":
 
     best_loss = float("inf")
+    best_accuracy = 0
     for epoch in range(num_epochs):
 
         #-------- Training -------------------
@@ -160,7 +161,7 @@ if __name__ =="__main__":
                 v_output = model(src = v_src, tgt = v_tgt, src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
-                val_accuracy += (1 - val_loss)
+                val_accuracy += rutl.accuracy_score(v_output, v_tgt)
             #break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)
@@ -171,6 +172,7 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
+        # if val_accuracy > best_accuracy:
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
