@@ -52,7 +52,7 @@ class GlyphStrawboss():
 
         # letter to index mapping
         for idx, char in enumerate(self.glyphs):
-            self.char2idx[char] = idx + 7 # +6 token initially
+            self.char2idx[char] = idx + 7 # +7 token initially
 
         # index to letter mapping
         for char, idx in self.char2idx.items():
@@ -72,7 +72,7 @@ class GlyphStrawboss():
                 vec.append(self.char2idx[i])
             vec.append(self.char2idx['#']) #end token
 
-            vec = np.asarray(vec, dtype=NP_TYPE)
+            vec = np.asarray(vec, dtype=np.int64)
             return vec
 
         except Exception as error:
@@ -124,6 +124,8 @@ class XlitData(Dataset):
         self.src = [ __svec(s)  for s in src_str]
         self.tgt = [ __tvec(s)  for s in tgt_str]
 
+        self.tgt_class_weights = self._char_class_weights(self.tgt)
+
         self.padding = padding
         if max_seq_size:
             self.max_tgt_size = max_seq_size
@@ -167,10 +169,30 @@ class XlitData(Dataset):
         Pads zero if word < max
         Clip word if word > max
         """
-        padded = np.zeros((max_len), dtype=NP_TYPE)
+        padded = np.zeros((max_len), dtype=np.int64)
         if len(x) > max_len: padded[:] = x[:max_len]
         else: padded[:len(x)] = x
         return padded
+
+    def _char_class_weights(self, x_list, scale = 10):
+        """For handling class imbalance in the characters
+        Return: 1D-tensor will be fed to CEloss weights for error calculation
+        """
+        from collections import Counter
+        full_list = []
+        for x in x_list:
+            full_list += list(x)
+        count_dict = dict(Counter(full_list))
+
+        class_weights = np.ones(self.tgt_glyph.size(), dtype = np.float32)
+        for k in count_dict:
+            class_weights[k] = (1/count_dict[k]) * scale
+
+        return class_weights
+
+
+
+
 
 
 class MonoLMData(Dataset):
@@ -224,7 +246,7 @@ class MonoLMData(Dataset):
         Pads zero if word < max
         Clip word if word > max
         """
-        padded = np.zeros((max_len), dtype=NP_TYPE)
+        padded = np.zeros((max_len), dtype=np.int64)
         if len(x) > max_len: padded[:] = x[:max_len]
         else: padded[:len(x)] = x
         return padded
