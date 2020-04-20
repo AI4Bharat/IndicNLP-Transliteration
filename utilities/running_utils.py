@@ -24,3 +24,13 @@ def count_train_param(model):
     train_params_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('The model has {} trainable parameters'.format(train_params_count))
     return train_params_count
+
+
+def accuracy_score(pred_tnsr, tgt_tnsr):
+    '''Simple accuracy calculation for training
+    tgt-arr, pred-arr: torch tensors
+    '''
+    if torch.equal(pred_tnsr.type(torch.long), tgt_tnsr):
+        return torch.tensor(1)
+    else:
+        return torch.tensor(0)
