@@ -51,6 +51,7 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
                                     rotation=0)
     conf_plot.xaxis.set_ticklabels(conf_plot.xaxis.get_ticklabels(),
                                     rotation=0)
+    plt.xlabel('Pred: '+ out_word)
 
     conf_plot.figure.savefig( save_path + "/"+in_word+"_attention.png")
 

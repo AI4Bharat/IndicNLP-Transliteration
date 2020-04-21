@@ -38,7 +38,7 @@ def infer_analytics(word):
     out, aw = model.inference(in_vec, debug=1)
     result = hi_glyph.xlitvec2word(out.numpy())
 
-    rutl.attention_weight_plotter(result, word, aw.detach().numpy()[:len(word)],
+    rutl.attention_weight_plotter(result, word, aw.detach().numpy()[:len(result)],
                                     save_path=save_path )
     return result
 
