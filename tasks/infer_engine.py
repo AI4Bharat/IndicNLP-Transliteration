@@ -35,7 +35,7 @@ def infer_analytics(word):
     if not os.path.exists(save_path): os.makedirs(save_path)
 
     in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
-    out, aw = model.inference(in_vec)
+    out, aw = model.inference(in_vec, debug=1)
     result = hi_glyph.xlitvec2word(out.numpy())
 
     rutl.attention_weight_plotter(result, word, aw.detach().numpy()[:len(word)],
