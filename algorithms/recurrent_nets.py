@@ -102,7 +102,7 @@ class Decoder(nn.Module):
         # score: (batch_size, max_length, hidden_dim)
         score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
 
-        # attention_weights shape == (batch_size, max_length, 1)
+        # attention_weights: (batch_size, max_length, 1)
         # we get 1 at the last axis because we are applying score to self.V
         attention_weights = torch.softmax(self.V(score), dim=1)
 
@@ -114,7 +114,8 @@ class Decoder(nn.Module):
 
         # attend_out (batch_size, 1, dec_embed_dim + hidden_size)
         attend_out = torch.cat((context_vector, x), -1)
-        return attend_out
+
+        return attend_out, attention_weights
 
     def forward(self, x, hidden, enc_output):
         '''
@@ -127,7 +128,9 @@ class Decoder(nn.Module):
         x = self.embedding(x)
 
         # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
-        x = self.attention( x, hidden, enc_output)
+        # aw: (batch_size, max_length, 1)
+        x, aw = self.attention( x, hidden, enc_output)
+
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, n_layers, hidden_size)
@@ -140,7 +143,7 @@ class Decoder(nn.Module):
         # output shape == (batch_size * 1, output_dim)
         output = self.fc(output)
 
-        return output, hidden
+        return output, hidden, aw
 
 
 class Seq2Seq(nn.Module):
@@ -196,10 +199,10 @@ class Seq2Seq(nn.Module):
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
 
         for t in range(1, tgt.size(1)):
-            # dec_hidden: dec_layers, batch_size, hidden_dim
+            # dec_hidden: 1, batch_size, hidden_dim
             # dec_output: batch_size, output_dim
             # dec_input: (batch_size, 1)
-            dec_output, dec_hidden = self.decoder( dec_input,
+            dec_output, dec_hidden, _ = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
             pred_vecs[:,:,t] = dec_output
@@ -215,7 +218,7 @@ class Seq2Seq(nn.Module):
 
         return pred_vecs #(batch_size, output_dim, sequence_sz)
 
-    def inference(self, src, max_tgt_sz=50):
+    def inference(self, src, max_tgt_sz=50, debug = 0):
         '''
         src: (sequence_len)
         '''
@@ -229,18 +232,24 @@ class Seq2Seq(nn.Module):
         dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
+        if debug: attend_weight_arr = torch.zeros(max_tgt_sz, len(src)).to(self.device)
+
         # dec_input: (batch_size, 1)
         dec_input = start_tok.view(1,1) # initialize to start token
 
         for t in range(max_tgt_sz):
-            dec_output, dec_hidden = self.decoder( dec_input,
+            dec_output, dec_hidden, aw = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
             prediction = torch.argmax(dec_output, dim=1)
             dec_input = prediction.unsqueeze(1)
             pred_arr[t] = prediction
+            if debug: attend_weight_arr[t] = aw.squeeze(-1)
+
             if torch.eq(prediction, end_tok):
                 break
+
+        if debug: return pred_arr.squeeze(), attend_weight_arr
         return pred_arr.squeeze()
 
     def beam_inference(self, src, beam_width=3, max_tgt_sz=50):
@@ -278,7 +287,7 @@ class Seq2Seq(nn.Module):
 
                 # dec_hidden: dec_layers, 1, hidden_dim
                 # dec_output: 1, output_dim
-                dec_output, dec_hidden = self.decoder( x = p_tup[1][-1].view(1,1), #dec_input: (1,1)
+                dec_output, dec_hidden, _ = self.decoder( x = p_tup[1][-1].view(1,1), #dec_input: (1,1)
                                                     hidden = p_tup[2],
                                                     enc_output = enc_output, )
 
