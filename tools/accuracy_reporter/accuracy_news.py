@@ -86,7 +86,7 @@ def inverse_rank(candidates, reference):
     else:
         return 1.0/(rank+1)
 
-def evaluate(input_data, test_data, verbose=True):
+def evaluate(input_data, test_data, verbose=True, topk_acc =1):
     '''
     Evaluates all metrics to save looping over input_data several times
     n is the map-n parameter
@@ -107,7 +107,7 @@ def evaluate(input_data, test_data, verbose=True):
             candidates = input_data[src_word]
             references = test_data[src_word]
 
-            acc[src_word] = max([int(candidates[0] == ref) for ref in references]) # either 1 or 0
+            acc[src_word] = max([int(cand == ref) for ref in references for cand in candidates[:topk_acc]]) # either 1 or 0
 
             f[src_word], f_best_match[src_word] = f_score(candidates[0], references)
 
@@ -220,13 +220,15 @@ def read_data(gt_json, args):
 def print_scores(args):
     gt_data, pred_data = read_data(args.gt_json, args)
 
-    acc, f, f_best_match, mrr, map_ref = evaluate(pred_data, gt_data)
+    if args.topk: topk_acc = args.topk
+    else: topk_acc = 1
+    acc, f, f_best_match, mrr, map_ref = evaluate(pred_data, gt_data, topk_acc = topk_acc )
 
     if args.save_output_csv:
         write_details(args.save_output_csv, pred_data, gt_data, acc, f, f_best_match, mrr, map_ref)
 
     N = len(acc)
-    sys.stdout.write('SCORES FOR %d SAMPLES:\n\n' % N)
+    sys.stdout.write('\n\nTOP {} SCORES FOR {} SAMPLES:\n'.format(topk_acc, N) )
     sys.stdout.write('ACC:          %f\n' % (float(sum([acc[src_word] for src_word in acc.keys()]))/N))
     sys.stdout.write('Mean F-score: %f\n' % (float(sum([f[src_word] for src_word in f.keys()]))/N))
     sys.stdout.write('MRR:          %f\n' % (float(sum([mrr[src_word] for src_word in mrr.keys()]))/N))
