@@ -171,9 +171,15 @@ def read_data(gt_json, args):
         with open(pred_json, encoding='utf8') as f:
             pred_data = json.load(f)
 
+        if args.topk:
+            for k in pred_data:
+                pred_data[k] = pred_data[k][:args.topk]
+
         return gt_data, pred_data
 
     elif file_type.lower() == 'txt':
+        print("****TopK extraction Not Implemented for txt Format***")
+
         # Read predictions from 2 parallel txt files
         infile = args.inp
         outfile = args.out
@@ -233,6 +239,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gt-json', type=str, required=True)
     parser.add_argument('--pred-json', type=str)
+    parser.add_argument('--topk', type=int)
     parser.add_argument('--inp', type=str)
     parser.add_argument('--out', type=str)
     parser.add_argument('--save-output-csv', type=str)
