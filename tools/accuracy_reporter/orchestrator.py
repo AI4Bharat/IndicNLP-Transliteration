@@ -2,6 +2,7 @@
 To be run from Repo Root directory
 """
 import os
+import sys
 import json
 from tqdm import tqdm
 
@@ -93,13 +94,11 @@ if __name__ == "__main__":
 
         gt_json = fi
         pred_json = sv_path
-
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
-        for topk in [10, 5, 3, 2, 1]:
-            print("Top-{} Numbers".format(topk))
-        ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
+        for topk in [10, 5, 3, 1]:
+            ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
             run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv | tee -a {}/Summary.txt".format(
                             gt_json, pred_json, topk, save_prefix, topk, SAVE_DIR )
 
-        os.system(run_accuracy_news)
+            os.system(run_accuracy_news)
