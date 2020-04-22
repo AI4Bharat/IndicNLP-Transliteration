@@ -5,6 +5,10 @@ import os
 import json
 from tqdm import tqdm
 
+def save_to_json(path, data_dict):
+    with open(path ,"w", encoding = "utf-8") as f:
+        json.dump(data_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+
 def toggle_json(read_path, save_prefix=""):
     with open(read_path, 'r', encoding = "utf-8") as f:
         data = json.load(f)
@@ -45,9 +49,17 @@ def get_from_json(path, ret_data = "key"):
 
     return sorted(out)
 
-def save_to_json(path, data_dict):
-    with open(path ,"w", encoding = "utf-8") as f:
-        json.dump(data_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+def merge_pred_truth_json(pred_path, truth_path ):
+    with open(pred_path) as f:
+        pred_data = json.load(f)
+    with open(truth_path) as f:
+        truth_data = json.load(f)
+    new_dict = {}
+    for k in truth_data:
+        new_dict[k] = {"gtruth": truth_data[k], "prediction": pred_data[k] }
+
+    save_file = os.path.dirname(pred_path) +"/Merged-truth_"+ os.path.basename(pred_path)
+    save_to_json(save_file, new_dict)
 
 ##------------------------------------------------------------------------------
 
@@ -56,7 +68,7 @@ def inference_looper(in_words):
     from tasks.infer_engine import inferencer
     out_dict = {}
     for i in tqdm(in_words):
-        out_dict[i] = inferencer(i)
+        out_dict[i] = inferencer(i, topk=10)
     return out_dict
 
 ROOT_PATH= ""
@@ -84,8 +96,10 @@ if __name__ == "__main__":
 
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
+        for topk in [10, 5, 3, 2, 1]:
+            print("Top-{} Numbers".format(topk))
         ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
-        run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --save-output-csv {}_scores.csv | tee -a {}/Summary.txt".format(
-                        gt_json, pred_json, save_prefix, SAVE_DIR )
+            run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv | tee -a {}/Summary.txt".format(
+                            gt_json, pred_json, topk, save_prefix, topk, SAVE_DIR )
 
         os.system(run_accuracy_news)
