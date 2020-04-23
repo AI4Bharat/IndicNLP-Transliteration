@@ -43,12 +43,15 @@ def find_best_reference(pred_list, truth_list):
 
 
 def generate_confusion(pred_file, truth_file, vocab):
+    '''
+    Returns a pandas dataframe with confusion matrix values
+    '''
     with open(pred_file) as f:
         pred_data = json.load(f)
     with open(truth_file) as f:
         truth_data = json.load(f)
 
-    conf_arr = np.zeros((len(vocab), len(vocab)), dtype = np.int64 )
+    conf_df = pd.DataFrame(0, columns=vocab, index=vocab)
     for k in pred_data:
         pred_list = pred_data[k]
         truth_list = truth_data[k]
@@ -59,48 +62,88 @@ def generate_confusion(pred_file, truth_file, vocab):
         truth = best_truth + ( "_" * (max_len_-len(best_truth)) )
 
         for p,t in zip(pred, truth):
-            p_idx = vocab.index(p)
-            t_idx = vocab.index(t)
-            conf_arr[p_idx][t_idx] += 1
+            conf_df.loc[p][t] += 1
 
-    return conf_arr
+    return conf_df
 
 
-def plot_confusion(array, axis_title, save_prefix=""):
-    plt.figure(figsize = (256,200))
-    sns.set(font = "Lohit Devanagari", font_scale = 2 )
-    conf_plot = sns.heatmap(array, annot=True,
-                      xticklabels = axis_title,
-                      yticklabels = axis_title)
+def plot_confusion(conf_df, show_chars = None, save_prefix=""):
+    plot_df = conf_df
+
+    ## Drop rows/columns full of zeros
+    plot_df = plot_df.loc[:,(df != 0).any(axis=0)] #remove columns
+    plot_df = plot_df.loc[(df!=0).any(axis=1), :] #remove rows
+
+    ## Remove unnecessary char counts
+    if show_chars:
+        plot_df = plot_df.drop("_", axis = 0)
+        plot_df = plot_df.drop("_", axis = 1)
+
+    if show_chars:
+        dfrows = list(plot_df.index.values)
+        dfcols = list(plot_df.columns.values)
+        plot_df.loc["other",:] = 0
+        plot_df.loc[:, "other"] = 0
+
+        for r in dfrows:
+            if r not in show_chars:
+                plot_df.loc["other",:] += plot_df.loc[r,:]
+                plot_df = plot_df.drop(r, axis = 0)
+
+        for c in dfcols:
+            if c not in show_chars:
+                plot_df.loc[:, "other"] += plot_df.loc[:, c]
+                plot_df = plot_df.drop(c, axis = 1)
+
+    ## Clip Values
+    plot_df = plot_df.clip(0, 200)
+
+    ##------
+    font_sz = 10; fig_sz = 20
+    plt.rcParams['figure.constrained_layout.use'] = True
+    sns.set(font = "Lohit Devanagari", font_scale = 1 )
+    plt.figure(figsize = (fig_sz,fig_sz))
+
+    conf_plot = sns.heatmap(plot_df, annot=False)
 
     conf_plot.yaxis.set_ticklabels(conf_plot.yaxis.get_ticklabels(),
-                                    ha='right',rotation=0, fontsize=60)
+                                    ha='right', rotation=0, fontsize = font_sz)
     conf_plot.xaxis.set_ticklabels(conf_plot.xaxis.get_ticklabels(),
-                                    ha='right',rotation=0, fontsize=60)
+                                    ha='left', rotation=0, fontsize = font_sz)
 
-
-    plt.ylabel('Predicted Character', fontsize =250)
-    plt.xlabel('True Character', fontsize =250)
+    # conf_plot.tick_params(axis='both', which='major', pad=10)
+    plt.ylabel('Predicted Character', fontsize = font_sz)
+    plt.xlabel('True Character', fontsize = font_sz)
+    plt.title ('ALL', fontsize = font_sz)
+    # plt.show()
 
     conf_plot.figure.savefig( save_prefix+"plot.png")
 
 
+## -----------------------------------------------------------------------------
 
-dgri = ["_"] + [chr(alpha) for alpha in range(2304, 2432)] + [
+dgri_unicodes =  [chr(alpha) for alpha in range(2304, 2432)] + [
     chr(0x200c), # ZeroWidth-NonJoiner U+200c
     chr(0x200d), # ZeroWidthJoiner U+200d
+    "_", # empty pading
 ]
 
-SAVE_DIR = "tools/visualization/logs/"
+dgri_seg = {
+    "vowel": ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', 'ऎ', 'ए', 'ऐ', 'ऑ', 'ऒ', 'ओ', 'औ','ऋ','ॠ','ऌ','ॡ'],
+    "cons" : ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण',
+              'त', 'थ', 'द', 'ध', 'न', 'ऩ', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ऱ', 'ल',
+              'ळ', 'ऴ', 'व', 'श', 'ष', 'स', 'ह', 'क़', 'ख़', 'ग़', 'ज़', 'ड़', 'ढ़', 'फ़', 'य़'],
+    "vow_symb": [ '्', 'ा', 'ि', 'ी', 'ु', 'ू', 'ॅ', 'ॆ', 'े', 'ै', 'ॉ', 'ॊ', 'ो', 'ौ', 'ृ', 'ॄ', 'ॢ', 'ॣ']
+}
+
+SAVE_DIR = "hypotheses/training_temp"  +"/viz_log/"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 if __name__ == "__main__":
 
-    pred_file = "/home/jgeob/Downloads/pred_EnKnk_ann1_test.json"
-    truth_file ="/home/jgeob/Downloads/EnKnk_ann1_test.json"
+    truth_file = "tools/accuracy_reporter/logs/EnLang-data/EnKnk_ann1_test.json"
+    pred_file ="hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json"
 
-    arr = generate_confusion(pred_file, truth_file, dgri)
-    arr = np.clip(arr, a_min = 0, a_max = 200)
-    #np.set_printoptions(threshold=sys.maxsize)
-    #print(arr)
+    df = generate_confusion(pred_file, truth_file, dgri_unicodes)
 
-    plot_confusion(arr, dgri, save_prefix= SAVE_DIR+"confusion")
+    plot_confusion(df,  dgri_seg["vow_symb"],
+                    save_prefix= SAVE_DIR+"confusion")
