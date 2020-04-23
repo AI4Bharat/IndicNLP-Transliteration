@@ -73,16 +73,16 @@ def inference_looper(in_words):
     return out_dict
 
 ROOT_PATH= ""
-SAVE_DIR = "tools/accuracy_reporter/logs/train-knk-101_t3"
-if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
-
 files = [
-    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_news18_dev.json",
-    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_fire13_dev.json",
+    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_news18_dev.json",
+    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_fire13_dev.json",
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_test.json",
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_special_test.json",
     ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnKnk_ann1_test.json"
 ]
+
+SAVE_DIR = "hypotheses/training_temp/acc_log"
+if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         pred_json = sv_path
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
-        for topk in [10, 5, 3, 1]:
+        for topk in [10, 5, 3, 2, 1]:
             ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
             run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv | tee -a {}/Summary.txt".format(
                             gt_json, pred_json, topk, save_prefix, topk, SAVE_DIR )
