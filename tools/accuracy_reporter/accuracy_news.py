@@ -9,7 +9,7 @@ USAGE:
     Example 2: Predictions file format - txt
     <<script.py>> --gt-json EnHi_dev.json --in EnHi_dev.en --out Moses_out.hi [--save-output-csv scores.csv]
 
-Source: https://github.com/snukky/news-translit-nmt/blob/master/tools/news_evaluation.py
+BasedOn: https://github.com/snukky/news-translit-nmt/blob/master/tools/news_evaluation.py
 """
 
 import os, sys, json, tqdm
@@ -32,32 +32,35 @@ def LCS_length(s1, s2):
                 C[i][j] = max(C[i][j-1], C[i-1][j])
     return C[m][n]
 
-def f_score(candidate, references):
+def f_score(candidates, references):
     '''
     Calculates F-score for the candidate and its best matching reference
     Returns F-score and best matching reference
     '''
     # determine the best matching reference (the one with the shortest ED)
     best_ref = references[0]
-    best_ref_lcs = LCS_length(candidate, references[0])
-    for ref in references[1:]:
-        lcs = LCS_length(candidate, ref)
-        if (len(ref) - 2*lcs) < (len(best_ref) - 2*best_ref_lcs):
-            best_ref = ref
-            best_ref_lcs = lcs
+    best_cand = candidates[0]
+    best_ref_lcs = LCS_length(candidates[0], references[0]) #iniatialized
+    for cand in candidates:
+        for ref in references:
+            lcs = LCS_length(cand, ref)
+            if (len(ref) - 2*lcs) < (len(best_ref) - 2*best_ref_lcs):
+                best_ref = ref
+                best_cand = cand
+                best_ref_lcs = lcs
 
     try:
-        precision = float(best_ref_lcs)/float(len(candidate))
+        precision = float(best_ref_lcs)/float(len(best_cand))
         recall = float(best_ref_lcs)/float(len(best_ref))
     except:
-        return 0.0, best_ref
+        return 0.0, best_ref, best_cand
     #    import ipdb
     #    ipdb.set_trace()
 
     if best_ref_lcs:
-        return 2*precision*recall/(precision+recall), best_ref
+        return 2*precision*recall/(precision+recall), best_ref, best_cand
     else:
-        return 0.0, best_ref
+        return 0.0, best_ref, best_cand
 
 def mean_average_precision(candidates, references, n):
     '''
@@ -95,7 +98,8 @@ def evaluate(input_data, test_data, verbose=True, topk_acc =1):
     mrr = {}
     acc = {}
     f = {}
-    f_best_match = {}
+    f_best_match_ref = {}
+    f_best_match_cand = {}
     #map_n = {}
     map_ref = {}
     #map_sys = {}
@@ -109,7 +113,7 @@ def evaluate(input_data, test_data, verbose=True, topk_acc =1):
 
             acc[src_word] = max([int(cand == ref) for ref in references for cand in candidates[:topk_acc]]) # either 1 or 0
 
-            f[src_word], f_best_match[src_word] = f_score(candidates[0], references)
+            f[src_word], f_best_match_ref[src_word], f_best_match_cand[src_word] = f_score(candidates, references)
 
             mrr[src_word] = max([inverse_rank(candidates, ref) for ref in references])
 
@@ -122,7 +126,7 @@ def evaluate(input_data, test_data, verbose=True, topk_acc =1):
             mrr[src_word] = 0.0
             acc[src_word] = 0.0
             f[src_word] = 0.0
-            f_best_match[src_word] = ''
+            f_best_match_ref[src_word] = ''
             #map_n[src_word] = 0.0
             map_ref[src_word] = 0.0
             #map_sys[src_word] = 0.0
@@ -131,16 +135,18 @@ def evaluate(input_data, test_data, verbose=True, topk_acc =1):
         print('Warning: No transliterations found for following %d words out of %d:' % (len(empty_xlits), len(test_data.keys())))
         print(empty_xlits)
 
-    return acc, f, f_best_match, mrr, map_ref
+    return acc, f, f_best_match_ref, f_best_match_cand, mrr, map_ref
 
-def write_details(output_fname, input_data, test_data, acc, f, f_best_match, mrr, map_ref):
+def write_details(output_fname, input_data, test_data, acc,
+                    f, f_best_match_ref, f_best_match_cand,
+                    mrr, map_ref):
     '''
     Writes detailed results to CSV file
     '''
     f_out = open(output_fname, 'w', encoding='utf-8')
 
-    f_out.write('%s\n' % (','.join(['"Source word"', '"Top-1"', '"ACC"', '"F-score"', '"Best matching reference"',
-    '"MRR"', '"MAP_ref"', '"References"'])))
+    f_out.write('%s\n' % (','.join(['"Source word"', '"ACC"', '"F-score"', '"MRR"', '"MAP_ref"',
+        '"FirstCandidate"', '"Best matching reference"', '"Best matching Candidate"', '"References"'])))
 
     for src_word in test_data.keys():
         if src_word in input_data and len(input_data[src_word]) > 0:
@@ -148,7 +154,10 @@ def write_details(output_fname, input_data, test_data, acc, f, f_best_match, mrr
         else:
             first_candidate = ''
 
-        f_out.write('%s,%s,%f,%f,%s,%f,%f,%s\n' % (src_word, first_candidate, acc[src_word], f[src_word], f_best_match[src_word], mrr[src_word], map_ref[src_word], '"' + ' | '.join(test_data[src_word]) + '"'))
+        f_out.write('%s,%f,%f,%f,%f,%s,%s,%s,%s\n' % (src_word,
+            acc[src_word], f[src_word], mrr[src_word], map_ref[src_word],
+            first_candidate, f_best_match_ref[src_word], f_best_match_cand[src_word],
+            '"' + ' | '.join(test_data[src_word]) + '"'))
 
     f_out.close()
 
@@ -222,10 +231,11 @@ def print_scores(args):
 
     if args.topk: topk_acc = args.topk
     else: topk_acc = 1
-    acc, f, f_best_match, mrr, map_ref = evaluate(pred_data, gt_data, topk_acc = topk_acc )
+    acc, f, f_best_ref,f_best_cand, mrr, map_ref = evaluate(pred_data, gt_data, topk_acc = topk_acc )
 
     if args.save_output_csv:
-        write_details(args.save_output_csv, pred_data, gt_data, acc, f, f_best_match, mrr, map_ref)
+        write_details(args.save_output_csv, pred_data, gt_data, acc,
+                                        f,  f_best_ref,f_best_cand, mrr, map_ref)
 
     N = len(acc)
     sys.stdout.write('\n\nTOP {} SCORES FOR {} SAMPLES:\n'.format(topk_acc, N) )
