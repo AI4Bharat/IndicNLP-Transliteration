@@ -41,17 +41,18 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
     '''
     Plot heat map of attention weights
     '''
-    plt.figure(figsize = (len(in_word)+10,len(out_word)))
+    font_sz = 10
+    plt.figure(figsize = (10,7))
     sns.set(font = "Lohit Devanagari", )
-    conf_plot = sns.heatmap(attention_array, annot=True,
+    conf_plot = sns.heatmap(attention_array, annot=False,
                       xticklabels = ["$"]+ list(in_word) + ["#"],
                       yticklabels = out_word)
 
     conf_plot.yaxis.set_ticklabels(conf_plot.yaxis.get_ticklabels(),
-                                    rotation=0)
+                                    rotation=0, fontsize = font_sz)
     conf_plot.xaxis.set_ticklabels(conf_plot.xaxis.get_ticklabels(),
-                                    rotation=0)
-    plt.xlabel('Pred: '+ out_word)
+                                    rotation=0, fontsize = font_sz)
+    plt.xlabel('Pred: '+ out_word, fontsize = font_sz)
 
     conf_plot.figure.savefig( save_path + "/"+in_word+"_attention.png")
 
