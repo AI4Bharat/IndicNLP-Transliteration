@@ -67,7 +67,7 @@ def generate_confusion(pred_file, truth_file, vocab):
     return conf_df
 
 
-def plot_confusion(conf_df, show_chars = None, save_prefix=""):
+def plot_confusion(conf_df, show_chars = None, save_prefix="", title = "Plot"):
     plot_df = conf_df
 
     ## Drop rows/columns full of zeros
@@ -114,10 +114,10 @@ def plot_confusion(conf_df, show_chars = None, save_prefix=""):
     # conf_plot.tick_params(axis='both', which='major', pad=10)
     plt.ylabel('Predicted Character', fontsize = font_sz)
     plt.xlabel('True Character', fontsize = font_sz)
-    plt.title ('ALL', fontsize = font_sz)
+    plt.title (title, fontsize = font_sz)
     # plt.show()
 
-    conf_plot.figure.savefig( save_prefix+"plot.png")
+    conf_plot.figure.savefig( save_prefix +'/'+title+"plot.png")
 
 
 ## -----------------------------------------------------------------------------
@@ -136,7 +136,7 @@ dgri_seg = {
     "vow_symb": [ '्', 'ा', 'ि', 'ी', 'ु', 'ू', 'ॅ', 'ॆ', 'े', 'ै', 'ॉ', 'ॊ', 'ो', 'ौ', 'ृ', 'ॄ', 'ॢ', 'ॣ']
 }
 
-SAVE_DIR = "hypotheses/training_temp"  +"/viz_log/"
+SAVE_DIR = "hypotheses/training_knk_103"  +"/viz_log/"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 if __name__ == "__main__":
 
@@ -145,5 +145,5 @@ if __name__ == "__main__":
 
     df = generate_confusion(pred_file, truth_file, dgri_unicodes)
 
-    plot_confusion(df,  dgri_seg["vow_symb"],
-                    save_prefix= SAVE_DIR+"confusion")
+    plot_confusion(df,  #dgri_seg['vowel'] + dgri_seg['vow_symb'],
+                    save_prefix= SAVE_DIR, title = "All")

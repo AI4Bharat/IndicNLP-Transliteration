@@ -31,7 +31,7 @@ def inferencer(word, topk = 3):
 def infer_analytics(word):
     """Analytics by ploting values
     """
-    save_path = os.path.dirname(weight_path) + "/viz/"
+    save_path = os.path.dirname(weight_path) + "/viz_log/"
     if not os.path.exists(save_path): os.makedirs(save_path)
 
     in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
