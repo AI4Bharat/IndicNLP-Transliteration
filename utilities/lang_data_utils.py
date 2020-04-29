@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import json
 from torch.utils.data import Dataset
 import numpy as np
 
@@ -90,6 +91,45 @@ class GlyphStrawboss():
         word = word.replace("_", "").replace('*','') # remove tokens
         return word
 
+class VocabSanitizer():
+    def __init__(self, data_file):
+        '''
+        data_file: path to file conatining vocabulary list
+        '''
+        extension = os.path.splitext(data_file)[-1]
+        if extension == ".json":
+            voc_list_ = json.load(open(data_file))
+        else:
+            print("Only Json file extension supported")
+
+        self.vocab_set = set(voc_list_)
+
+    def remove_astray(self, word_list):
+        '''Remove words that are not present in vocabulary
+        '''
+        new_list = []
+        for v in word_list:
+            if v in self.vocab_set:
+                new_list.append(v)
+        if new_list == []:
+            return word_list.copy()
+
+        return new_list
+
+    def reposition(self, word_list):
+        '''Reorder Words in list
+        '''
+        new_list = []
+        temp_ = word_list.copy()
+        for v in word_list:
+            if v in self.vocab_set:
+                new_list.append(v)
+                temp_.remove(v)
+        new_list.extend(temp_)
+
+        return new_list
+
+
 
 
 ##======== Data Reading ==========================================================
@@ -152,7 +192,6 @@ class XlitData(Dataset):
     def _json2_x_y(self, json_file):
         ''' Convert JSON lang pairs to Key-Value lists with indexwise one2one correspondance
         '''
-        import json
         with open(json_file, 'r', encoding = "utf-8") as f:
             data = json.load(f)
 
@@ -189,9 +228,6 @@ class XlitData(Dataset):
             class_weights[k] = (1/count_dict[k]) * scale
 
         return class_weights
-
-
-
 
 
 
@@ -254,7 +290,6 @@ class MonoLMData(Dataset):
     def _json2_x(self, json_file):
         ''' Read Mono data from JSON lang pairs
         '''
-        import json
         with open(json_file, 'r', encoding = "utf-8") as f:
             data = json.load(f)
         x = set()

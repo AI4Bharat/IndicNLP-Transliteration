@@ -65,7 +65,6 @@ def merge_pred_truth_json(pred_path, truth_path ):
 ##------------------------------------------------------------------------------
 
 def inference_looper(in_words):
-    from timeit import timeit
     from tasks.infer_engine import inferencer
     out_dict = {}
     for i in tqdm(in_words):
