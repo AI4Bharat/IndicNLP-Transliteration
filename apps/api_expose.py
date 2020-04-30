@@ -66,18 +66,32 @@ sys.path.append(BASEPATH)
 
 class XlitEngine():
     def __init__(self):
-        self.langs = ["hi"]
+        self.langs = ["hi", "knk"]
 
-        from bin.hindi.program85 import inference_engine as hindi_engine
-        self.hindi_engine = hindi_engine
+        try:
+            from bin.hindi.program85 import inference_engine as hindi_engine
+            self.hindi_engine = hindi_engine
+        except:
+            self.langs.remove('hi')
+
+        try:
+            from bin.konkani.knk_program104 import inference_engine as konkani_engine
+            self.konkani_engine = konkani_engine
+        except:
+            self.langs.remove('knk')
+
 
     def transliterate(self, lang_code, eng_word):
+        if lang_code not in self.langs:
+            print("Unknown Langauge requested", lang_code)
+            return XlitError.lang_err
+
         try:
             if lang_code == "hi":
                 return self.hindi_engine(eng_word)
-            else:
-                print("Unknown Langauge")
-                return XlitError.lang_err
+            elif lang_code == "knk":
+                return self.konkani_engine(eng_word)
+
         except:
             return XlitError.unknown_err
 
