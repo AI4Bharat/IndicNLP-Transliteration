@@ -64,11 +64,11 @@ def merge_pred_truth_json(pred_path, truth_path ):
 
 ##------------------------------------------------------------------------------
 
-def inference_looper(in_words):
+def inference_looper(in_words, topk = 3):
     from tasks.infer_engine import inferencer
     out_dict = {}
     for i in tqdm(in_words):
-        out_dict[i] = inferencer(i, topk=10)
+        out_dict[i] = inferencer(i, topk=topk)
     return out_dict
 
 ROOT_PATH= ""
@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     for fi in files:
         words = get_from_json(fi, "key")
-        out_dict = inference_looper(words)
+        out_dict = inference_looper(words, topk = 10)
         sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
         save_to_json(sv_path, out_dict)
 
