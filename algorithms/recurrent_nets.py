@@ -252,7 +252,7 @@ class Seq2Seq(nn.Module):
         if debug: return pred_arr.squeeze(), attend_weight_arr
         return pred_arr.squeeze()
 
-    def beam_inference(self, src, beam_width=3, max_tgt_sz=50):
+    def active_beam_inference(self, src, beam_width=3, max_tgt_sz=50):
         ''' Search based decoding
         src: (sequence_len)
         '''
@@ -311,8 +311,73 @@ class Seq2Seq(nn.Module):
             end_flags_ = [1 if t[1][-1] == end_tok else 0 for t in top_pred_list]
             if beam_width == sum( end_flags_ ): break
 
-        prediction_list = [t[1] for t in top_pred_list ]
+        pred_tnsr_list = [t[1] for t in top_pred_list ]
 
-        return prediction_list
+        return pred_tnsr_list
+
+    def passive_beam_inference(self, src, beam_width = 7, max_tgt_sz=50):
+        '''
+        src: (sequence_len)
+        '''
+        def _avg_score(p_tup):
+            """ Used for Sorting
+            TODO: Dividing by length of sequence power alpha as hyperparam
+            """
+            return  p_tup[0]
+
+        def _beam_search_topk(topk_obj, start_tok, beam_width):
+            """ search for sequence with maxim prob
+            topk_obj[x]: .values & .indices shape:(1, beam_width)
+            """
+            # top_pred_list[x]: tuple(prob, seq_tensor)
+            top_pred_list = [ (0, start_tok.unsqueeze(0) ), ]
+
+            for obj in topk_obj:
+                new_lst_ = list()
+                for itm in top_pred_list:
+                    for i in range(beam_width):
+                        sig_logsmx_ = itm[0] + obj.values[0][i]
+                        seq_tensor_ = torch.cat( (itm[1] , obj.indices[0][i].view(1) ) )
+                        new_lst_.append( (sig_logsmx_, seq_tensor_) )
+
+                new_lst_.sort(key = _avg_score, reverse =True)
+                top_pred_list = new_lst_[:beam_width]
+            return top_pred_list
+
+        batch_size = 1
+        start_tok = src[0]
+        end_tok = src[-1]
+        src_sz = torch.tensor([len(src)])
+        src_ = src.unsqueeze(0)
+
+        enc_output, enc_hidden = self.encoder(src_, src_sz)
+        dec_hidden = self.enc2dec_hidden(enc_hidden)
+
+        # dec_input: (1, 1)
+        dec_input = start_tok.view(1,1) # initialize to start token
+
+        topk_obj = []
+        for t in range(max_tgt_sz):
+            dec_output, dec_hidden, aw = self.decoder( dec_input,
+                                               dec_hidden,
+                                               enc_output,  )
+
+            ## π{prob} = Σ{log(prob)} -> to prevent diminishing
+            # dec_output: (1, output_dim)
+            dec_output = nn.functional.log_softmax(dec_output, dim=1)
+            # pred_topk.values & pred_topk.indices: (1, beam_width)
+            pred_topk = torch.topk(dec_output, k=beam_width, dim=1)
+
+            topk_obj.append(pred_topk)
+
+            # dec_input: (1, 1)
+            dec_input = pred_topk.indices[0][0].view(1,1)
+            if torch.eq(dec_input, end_tok):
+                break
+
+        top_pred_list = _beam_search_topk(topk_obj, start_tok, beam_width)
+        pred_tnsr_list = [t[1] for t in top_pred_list ]
+
+        return pred_tnsr_list
 
 
