@@ -7,7 +7,9 @@ en_glyph = GlyphStrawboss("en")
 
 ##============ RNN Based =======================================================
 import torch
-voc_sanitize = VocabSanitizer("data/X_word_list.json")
+from hypotheses.training_85.recurrent_nets_85 import model
+weight_path = "hypotheses/training_85/Training_85_model.pth"
+# voc_sanitize = VocabSanitizer("data/X_word_list.json")
 
 weights = torch.load( weight_path, map_location=torch.device('cpu'))
 model.load_state_dict(weights)
@@ -21,9 +23,10 @@ def inferencer(word, topk = 3):
         return result
     else:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
-        out_list = model.beam_inference(in_vec, beam_width = topk)
+        ## change to active or passive beam
+        out_list = model.passive_beam_inference(in_vec, beam_width = topk)
         result = [ hi_glyph.xlitvec2word(out.numpy()) for out in out_list]
-        result = voc_sanitize.reposition(result)
+        # result = voc_sanitize.reposition(result)
         return result
 
 
