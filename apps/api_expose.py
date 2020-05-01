@@ -69,19 +69,23 @@ class XlitEngine():
         self.langs = ["hi", "knk"]
 
         try:
-            from bin.hindi.program85 import inference_engine as hindi_engine
+            from bins.hindi.program85 import inference_engine as hindi_engine
             self.hindi_engine = hindi_engine
         except:
+            print("!!! Failure in loading Hindi")
             self.langs.remove('hi')
 
         try:
-            from bin.konkani.knk_program104 import inference_engine as konkani_engine
+            from bins.konkani.knk_program104 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
         except:
+            print("!!! Failure in loading Konkani")
             self.langs.remove('knk')
 
 
     def transliterate(self, lang_code, eng_word):
+        eng_word = self._clean(eng_word)
+
         if lang_code not in self.langs:
             print("Unknown Langauge requested", lang_code)
             return XlitError.lang_err
@@ -95,6 +99,11 @@ class XlitEngine():
         except:
             return XlitError.unknown_err
 
+    def _clean(self, word):
+        word = word.lower()
+        accepted = "abcdefghijklmnopqrstuvwxyz"
+        word = ''.join([i for i in word if i in accepted])
+        return word
 
 
 if __name__ == '__main__':
