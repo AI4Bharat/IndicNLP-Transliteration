@@ -7,6 +7,7 @@ USAGE:
 """
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS, cross_origin
 from datetime import datetime
 import traceback
 import os
@@ -24,10 +25,9 @@ app.config['JSON_AS_ASCII'] = False
 
 ## Set in order to host in specific domain
 SSL_FILES = None
-'''
-SSL_FILES = ('/etc/letsencrypt/live/domain.com/fullchain.pem',
-            '/etc/letsencrypt/live/domain.com/privkey.pem')
-'''
+# SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
+#             '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
+
 
 @app.route('/tl/<lang_code>/<eng_word>', methods = ['GET', 'POST'])
 def ai4bharat_xlit(lang_code, eng_word):
@@ -66,21 +66,21 @@ sys.path.append(BASEPATH)
 
 class XlitEngine():
     def __init__(self):
-        self.langs = ["hi", "knk"]
+        self.langs = ["hi", "gom"]
 
         try:
             from bins.hindi.program85 import inference_engine as hindi_engine
             self.hindi_engine = hindi_engine
         except:
-            print("!!! Failure in loading Hindi")
+            print("Failure in loading Hindi")
             self.langs.remove('hi')
 
         try:
-            from bins.konkani.knk_program104 import inference_engine as konkani_engine
+            from bins.konkani.gom_program104 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
         except:
-            print("!!! Failure in loading Konkani")
-            self.langs.remove('knk')
+            print("Failure in loading Konkani")
+            self.langs.remove('gom')
 
 
     def transliterate(self, lang_code, eng_word):
@@ -93,7 +93,7 @@ class XlitEngine():
         try:
             if lang_code == "hi":
                 return self.hindi_engine(eng_word)
-            elif lang_code == "knk":
+            elif lang_code == "gom":
                 return self.konkani_engine(eng_word)
 
         except:
@@ -108,4 +108,8 @@ class XlitEngine():
 
 if __name__ == '__main__':
     engine = XlitEngine()
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    if SSL_FILES:
+        cors = CORS(app, resources={r"/*": {"origins": "*"}})
+        app.run(host='0.0.0.0', port=443, ssl_context=SSL_FILES)
+    else:
+        app.run(debug=True, host='0.0.0.0', port=8000)
