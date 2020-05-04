@@ -6,6 +6,14 @@ Contains Applications buit around the Transliteration engine.
 
 :warning: Contents of `bins` folder will not be commited.
 
-### Usage
-Download the zip from github based on version required and extract.
-It will contain usge instruction and dependencies list.
+Dependency Libraries:
+* flask
+* flask_cors
+* torch
+* numpy
+
+Usage:
+
+1.HTTPS api <br>
+`$ export PYTHONPATH=/path-to-apps/bins/:$PYTHONPATH` <br>
+`$ sudo env PATH=$PATH python3 api_expose.py`
