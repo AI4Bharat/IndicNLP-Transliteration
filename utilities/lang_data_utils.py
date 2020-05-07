@@ -113,7 +113,7 @@ class VocabSanitizer():
                 new_list.append(v)
         if new_list == []:
             return word_list.copy()
-
+            # return [" "]
         return new_list
 
     def reposition(self, word_list):
