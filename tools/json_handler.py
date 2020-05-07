@@ -65,6 +65,7 @@ def merge_xlit_jsons(filepath_list, save_path = ""):
     for k in whole_dict:
         whole_dict[k] = list(whole_dict[k])
 
+    print("Total Key count:", len(whole_dict))
     with open(save_path+"merged_file.json","w", encoding = "utf-8") as f:
         json.dump(whole_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
@@ -121,14 +122,14 @@ def xlitjson_to_mosestxt(read_file, save_prefix = "moses_format"):
 
 if __name__ == "__main__":
 
-    # convert_ezann_to_xlit("/home/jgeob/Downloads/Konkani_Literation_A_complete.json")
+    # convert_ezann_to_xlit("/home/jgeob/Downloads/Maithili_Literation_1-B.json")
 
     # ## Merge JSON
-    # files = ["/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/HiEn_fire13_train.json",
-    # "/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/HiEn_news18_train.json"]
+    files = ["/home/jgeob/Downloads/mai-1a.jsonout_xlit_format.json",
+    "/home/jgeob/Downloads/mai-1b.jsonout_xlit_format.json"]
 
-    # merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/')
+    merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/maithili/')
 
     ##
-    # xlitjson_to_mosestxt("data/konkani/KnkEn_ann1_test.json")
+    # xlitjson_to_mosestxt("data/konkani/GomEn_ann1_test.json")
     pass

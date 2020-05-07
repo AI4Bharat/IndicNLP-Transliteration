@@ -11,6 +11,7 @@ Dependency Libraries:
 * flask_cors
 * torch
 * numpy
+* gevent
 
 Usage:
 
