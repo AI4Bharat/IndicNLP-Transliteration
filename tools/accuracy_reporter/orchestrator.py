@@ -71,6 +71,21 @@ def inference_looper(in_words, topk = 3):
         out_dict[i] = inferencer(i, topk=topk)
     return out_dict
 
+def vocab_sanity_runner(pred_json, voc_json):
+    '''
+    Re-Clean Prediction json based on the known Vocabulary of the langauge
+    '''
+    from utilities.lang_data_utils import VocabSanitizer
+    voc_sanity = VocabSanitizer(voc_json)
+
+    pred_dict = json.load(open(pred_json))
+    out_dict = {}
+    for k in pred_dict.keys():
+        out_dict[k] = voc_sanity.remove_astray(pred_dict[k])
+
+    return out_dict
+
+
 ROOT_PATH= ""
 files = [
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_news18_dev.json",
@@ -88,6 +103,10 @@ if __name__ == "__main__":
     for fi in files:
         words = get_from_json(fi, "key")
         out_dict = inference_looper(words, topk = 10)
+        ## Testing with LM adjustments
+        # out_dict = vocab_sanity_runner( "hypotheses/prediction.json",
+        #                                 "data/word_list.json")
+
         sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
         save_to_json(sv_path, out_dict)
 
