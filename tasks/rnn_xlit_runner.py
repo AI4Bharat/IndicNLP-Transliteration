@@ -97,8 +97,8 @@ model = model.to(device)
 ##====== Optimizer Zone ===================================================================
 
 
-criterion = torch.nn.CrossEntropyLoss(
-    weight = torch.from_numpy(train_dataset.tgt_class_weights).to(device)  )
+criterion = torch.nn.CrossEntropyLoss()
+    # weight = torch.from_numpy(train_dataset.tgt_class_weights).to(device)  )
 
 def loss_estimator(pred, truth):
     """ Only consider non-zero inputs in the loss; mask needed

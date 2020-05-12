@@ -30,7 +30,7 @@ class Encoder(nn.Module):
 
         if not hidden:
             # hidden: n_layer*num_directions, batch_size, hidden_dim
-            hidden = torch.zeros((self.enc_layers** self.enc_directions, batch_sz,
+            hidden = torch.zeros((self.enc_layers * self.enc_directions, batch_sz,
                         self.enc_hidden_dim )).to(self.device)
 
         ## pack the padded data
@@ -190,6 +190,7 @@ class Seq2Seq(nn.Module):
         # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src, src_sz)
 
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
         dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         # pred_vecs: (batch_size, output_dim, sequence_sz) -> shape required for CELoss
@@ -199,7 +200,7 @@ class Seq2Seq(nn.Module):
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
 
         for t in range(1, tgt.size(1)):
-            # dec_hidden: 1, batch_size, hidden_dim
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
             # dec_output: batch_size, output_dim
             # dec_input: (batch_size, 1)
             dec_output, dec_hidden, _ = self.decoder( dec_input,
@@ -228,7 +229,10 @@ class Seq2Seq(nn.Module):
         src_sz = torch.tensor([len(src)])
         src_ = src.unsqueeze(0)
 
+        # enc_output: (batch_size, padded_seq_length, enc_hidden_dim*num_direction)
+        # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src_, src_sz)
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
         dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
@@ -269,7 +273,10 @@ class Seq2Seq(nn.Module):
         src_sz = torch.tensor([len(src)])
         src_ = src.unsqueeze(0)
 
+        # enc_output: (batch_size, padded_seq_length, enc_hidden_dim*num_direction)
+        # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src_, src_sz)
+        # init_dec_hidden: dec_layers, batch_size , dec_hidden_dim
         init_dec_hidden = self.enc2dec_hidden(enc_hidden)
 
         # top_pred[][0] = Σ-log_softmax
