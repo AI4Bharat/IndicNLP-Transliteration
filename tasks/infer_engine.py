@@ -24,7 +24,7 @@ def inferencer(word, topk = 3):
     else:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
         ## change to active or passive beam
-        out_list = model.passive_beam_inference(in_vec, beam_width = topk)
+        out_list = model.active_beam_inference(in_vec, beam_width = topk)
         result = [ hi_glyph.xlitvec2word(out.numpy()) for out in out_list]
         # result = voc_sanitize.reposition(result)
         return result

@@ -92,10 +92,14 @@ files = [
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_fire13_dev.json",
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_test.json",
     # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_special_test.json",
-    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnKnk_ann1_test.json"
+
+    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnGom_ann1_test.json"
+
+    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnMai_ann1_valid.json",
+    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnMai_ann1_test.json"
 ]
 
-SAVE_DIR = "hypotheses/training_temp/acc_log"
+SAVE_DIR = "hypotheses/training_mai_101/acc_log" + "/active/"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
@@ -104,8 +108,8 @@ if __name__ == "__main__":
         words = get_from_json(fi, "key")
         out_dict = inference_looper(words, topk = 10)
         ## Testing with LM adjustments
-        # out_dict = vocab_sanity_runner( "hypotheses/prediction.json",
-        #                                 "data/word_list.json")
+        # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",
+            # "data/konkani/gom_word_list.json")
 
         sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
         save_to_json(sv_path, out_dict)
@@ -116,7 +120,9 @@ if __name__ == "__main__":
 
         for topk in [10, 5, 3, 2, 1]:
             ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
-            run_accuracy_news = "python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv | tee -a {}/Summary.txt".format(
-                            gt_json, pred_json, topk, save_prefix, topk, SAVE_DIR )
+            run_accuracy_news = "( echo {} && python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv ) | tee -a {}/Summary.txt".format(
+                            os.path.basename(fi),
+                            gt_json, pred_json, topk,
+                            save_prefix, topk, SAVE_DIR )
 
             os.system(run_accuracy_news)
