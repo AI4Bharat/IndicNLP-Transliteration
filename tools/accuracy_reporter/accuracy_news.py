@@ -238,11 +238,11 @@ def print_scores(args):
                                         f,  f_best_ref,f_best_cand, mrr, map_ref)
 
     N = len(acc)
-    sys.stdout.write('\n\nTOP {} SCORES FOR {} SAMPLES:\n'.format(topk_acc, N) )
+    sys.stdout.write('\nTOP {} SCORES FOR {} SAMPLES:\n'.format(topk_acc, N) )
     sys.stdout.write('ACC:          %f\n' % (float(sum([acc[src_word] for src_word in acc.keys()]))/N))
     sys.stdout.write('Mean F-score: %f\n' % (float(sum([f[src_word] for src_word in f.keys()]))/N))
     sys.stdout.write('MRR:          %f\n' % (float(sum([mrr[src_word] for src_word in mrr.keys()]))/N))
-    sys.stdout.write('MAP_ref:      %f\n' % (float(sum([map_ref[src_word] for src_word in map_ref.keys()]))/N))
+    sys.stdout.write('MAP_ref:      %f\n\n' % (float(sum([map_ref[src_word] for src_word in map_ref.keys()]))/N))
     #sys.stdout.write('MAP_%d:       %f\n' % (n, float(sum([map_n[src_word] for src_word in map_n.keys()]))/N))
     #sys.stdout.write('MAP_sys:      %f\n' % (float(sum([map_sys[src_word] for src_word in map_sys.keys()]))/N))
 

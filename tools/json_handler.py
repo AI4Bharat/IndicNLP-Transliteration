@@ -125,11 +125,16 @@ if __name__ == "__main__":
     # convert_ezann_to_xlit("/home/jgeob/Downloads/Maithili_Literation_1-B.json")
 
     # ## Merge JSON
-    files = ["/home/jgeob/Downloads/mai-1a.jsonout_xlit_format.json",
-    "/home/jgeob/Downloads/mai-1b.jsonout_xlit_format.json"]
+    # files = ["/home/jgeob/Downloads/mai-1a.jsonout_xlit_format.json",
+    # "/home/jgeob/Downloads/out_xlit_format.json"]
 
-    merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/maithili/')
+    # merge_xlit_jsons(files, '/home/jgeob/quater_ws/transLit/IndianNLP-Transliteration/data/maithili/')
 
     ##
     # xlitjson_to_mosestxt("data/konkani/GomEn_ann1_test.json")
+
+    # ## Toggle json
+    # toggle_json_xlit("data/maithili/MaiEn_ann1_valid.json",
+    # save_prefix="tools/accuracy_reporter/logs/EnLang-data/")
+
     pass
