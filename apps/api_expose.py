@@ -113,6 +113,8 @@ class XlitEngine():
 
     def transliterate(self, lang_code, eng_word):
         eng_word = self._clean(eng_word)
+        if eng_word == "":
+            return []
 
         if lang_code not in self.langs:
             print("Unknown Langauge requested", lang_code)
