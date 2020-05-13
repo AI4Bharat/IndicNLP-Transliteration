@@ -12,6 +12,7 @@ NP_TYPE = np.int64
 Note: Replace dummy chars for adding new characters
       Don't change the order of the Characters in lists
 '''
+''' Replaced with compact version
 indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
 
 english_smallcase = [chr(alpha) for alpha in range(97, 123)] + [
@@ -23,6 +24,25 @@ devanagari_scripts =  [chr(alpha) for alpha in range(2304, 2432)] + [
     chr(0x200d), # ZeroWidthJoiner U+200d
     chr(0x265a),chr(0x265b),chr(0x265c),chr(0x265e),chr(0x265e),chr(0x265f), # Dummy placeholders for future addition
 ]
+'''
+# ----
+
+indoarab_num = [chr(alpha) for alpha in range(48, 58)]
+
+english_smallcase = [chr(alpha) for alpha in range(97, 123)]
+
+devanagari_scripts = ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', 'ऎ', 'ए', 'ऐ', 'ऑ', 'ऒ', 'ओ', 'औ','ऋ','ॠ','ऌ','ॡ','ॲ',
+    'क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण',
+    'त', 'थ', 'द', 'ध', 'न', 'ऩ', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ऱ', 'ल',
+    'ळ', 'ऴ', 'व', 'श', 'ष', 'स', 'ह', 'क़', 'ख़', 'ग़', 'ज़', 'ड़', 'ढ़', 'फ़', 'य़',
+    '्', 'ा', 'ि', 'ी', 'ु', 'ू', 'ॅ', 'ॆ', 'े', 'ै', 'ॉ', 'ॊ', 'ो', 'ौ',
+    'ृ', 'ॄ', 'ॢ', 'ॣ', 'ँ', 'ं', 'ः', '़', '॑',  'ऽ',
+
+    chr(0x200c), # ZeroWidth-NonJoiner U+200c
+    chr(0x200d), # ZeroWidthJoiner U+200d
+]
+
+
 
 #-------------------------------------------------------------------------------
 
@@ -33,9 +53,9 @@ class GlyphStrawboss():
         """
         self.lang = lang
         if lang == 'en':
-            self.glyphs = indoarab_numeric + english_smallcase
+            self.glyphs = english_smallcase
         elif lang in ['hi', 'gom', 'mai']:
-            self.glyphs = indoarab_numeric + devanagari_scripts
+            self.glyphs = devanagari_scripts
 
         self.char2idx = {}
         self.idx2char = {}
@@ -47,7 +67,7 @@ class GlyphStrawboss():
         self.char2idx['$'] = 1  #start
         self.char2idx['#'] = 2  #end
         self.char2idx['*'] = 3  #Mask
-        self.char2idx['&'] = 4  #unused
+        self.char2idx["'"] = 4  #apostrophe U+0027
         self.char2idx['%'] = 5  #unused
         self.char2idx['!'] = 6  #unused
 
