@@ -67,6 +67,7 @@ enc_emb_dim = 256
 dec_emb_dim = 256
 enc_hidden_dim = 512
 dec_hidden_dim = 512
+enc2dec_hid = False
 enc_layers = 2
 dec_layers = 4
 m_dropout = 0
@@ -84,7 +85,8 @@ dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 dropout= m_dropout,  device = device,
                 enc_outstate_dim= enc_outstate_dim)
 
-model = Seq2Seq(enc, dec, device=device)
+model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid,
+                device=device)
 model = model.to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified

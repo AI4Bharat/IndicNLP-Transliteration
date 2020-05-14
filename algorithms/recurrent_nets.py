@@ -28,7 +28,7 @@ class Encoder(nn.Module):
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
 
-        if not hidden:
+        if hidden is None:
             # hidden: n_layer*num_directions, batch_size, hidden_dim
             hidden = torch.zeros((self.enc_layers * self.enc_directions, batch_sz,
                         self.enc_hidden_dim )).to(self.device)
@@ -123,9 +123,15 @@ class Decoder(nn.Module):
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size
         '''
+        batch_sz = x.shape[0]
 
         # x (batch_size, 1, dec_embed_dim) -> after embedding
         x = self.embedding(x)
+
+        if hidden is None:
+            # hidden: n_layers, batch_size, hidden_dim
+            hidden = torch.zeros((self.dec_layers, batch_sz,
+                                    self.dec_hidden_dim )).to(self.device)
 
         # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
         # aw: (batch_size, max_length, 1)
@@ -147,15 +153,17 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder, dropout = 0, device = "cpu"):
+    def __init__(self, encoder, decoder, pass_enc2dec_hid=False, dropout = 0, device = "cpu"):
         super(Seq2Seq, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
         self.device = device
+        self.pass_enc2dec_hid = pass_enc2dec_hid
 
         assert decoder.enc_outstate_dim == encoder.enc_directions*encoder.enc_hidden_dim,"Set `enc_out_dim` correctly in decoder"
-        assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Size of encoder and decoder must be same, currently"
+        if self.pass_enc2dec_hid:
+            assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Size of encoder and decoder must be same, or unset `pass_enc2dec_hid`"
 
         #TODO: Support Different Hidden_size for Enc&Dec; Modify the ConvLayer to facilitate
         self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
@@ -190,8 +198,12 @@ class Seq2Seq(nn.Module):
         # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src, src_sz)
 
-        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-        dec_hidden = self.enc2dec_hidden(enc_hidden)
+        if self.pass_enc2dec_hid:
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        else:
+            # dec_hidden: Will be initialized to zeros internally
+            dec_hidden = None
 
         # pred_vecs: (batch_size, output_dim, sequence_sz) -> shape required for CELoss
         pred_vecs = torch.zeros(batch_size, self.decoder.output_dim, tgt.size(1)).to(self.device)
@@ -232,8 +244,13 @@ class Seq2Seq(nn.Module):
         # enc_output: (batch_size, padded_seq_length, enc_hidden_dim*num_direction)
         # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src_, src_sz)
-        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-        dec_hidden = self.enc2dec_hidden(enc_hidden)
+
+        if self.pass_enc2dec_hid:
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        else:
+            # dec_hidden: Will be initialized to zeros internally
+            dec_hidden = None
 
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
         if debug: attend_weight_arr = torch.zeros(max_tgt_sz, len(src)).to(self.device)
@@ -276,8 +293,13 @@ class Seq2Seq(nn.Module):
         # enc_output: (batch_size, padded_seq_length, enc_hidden_dim*num_direction)
         # enc_hidden: (enc_layers*num_direction, batch_size, hidden_dim)
         enc_output, enc_hidden = self.encoder(src_, src_sz)
-        # init_dec_hidden: dec_layers, batch_size , dec_hidden_dim
-        init_dec_hidden = self.enc2dec_hidden(enc_hidden)
+
+        if self.pass_enc2dec_hid:
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            init_dec_hidden = self.enc2dec_hidden(enc_hidden)
+        else:
+            # dec_hidden: Will be initialized to zeros internally
+            init_dec_hidden = None
 
         # top_pred[][0] = Σ-log_softmax
         # top_pred[][1] = sequence torch.tensor shape: (1)
@@ -358,10 +380,17 @@ class Seq2Seq(nn.Module):
         src_ = src.unsqueeze(0)
 
         enc_output, enc_hidden = self.encoder(src_, src_sz)
-        dec_hidden = self.enc2dec_hidden(enc_hidden)
+
+        if self.pass_enc2dec_hid:
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        else:
+            # dec_hidden: Will be initialized to zeros internally
+            dec_hidden = None
 
         # dec_input: (1, 1)
         dec_input = start_tok.view(1,1) # initialize to start token
+
 
         topk_obj = []
         for t in range(max_tgt_sz):
