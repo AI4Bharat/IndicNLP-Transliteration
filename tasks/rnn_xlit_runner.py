@@ -67,7 +67,8 @@ enc_emb_dim = 256
 dec_emb_dim = 256
 enc_hidden_dim = 512
 dec_hidden_dim = 512
-enc2dec_hid = False
+enc2dec_hid = True
+attention = False
 enc_layers = 2
 dec_layers = 4
 m_dropout = 0
@@ -82,8 +83,10 @@ enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
 dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 hidden_dim= dec_hidden_dim,
                 layers= dec_layers,
-                dropout= m_dropout,  device = device,
-                enc_outstate_dim= enc_outstate_dim)
+                dropout= m_dropout,
+                use_attention = attention,
+                enc_outstate_dim= enc_outstate_dim,
+                device = device,)
 
 model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid,
                 device=device)
@@ -93,7 +96,7 @@ model = model.to(device)
 
 ##------ Model Details ---------------------------------------------------------
 # rutl.count_train_param(model)
-# print(model)
+print(model)
 
 
 ##====== Optimizer Zone ===================================================================

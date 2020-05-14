@@ -57,6 +57,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        layers = 1, dropout = 0,
+                       use_attention = True,
                        enc_outstate_dim = None, # enc_directions *enc_hidden_dim
                        device = "cpu"):
         super(Decoder, self).__init__()
@@ -66,7 +67,12 @@ class Decoder(nn.Module):
         self.dec_hidden_dim = hidden_dim
         self.dec_embed_dim = embed_dim
         self.dec_layers = layers
-        self.enc_outstate_dim = enc_outstate_dim if enc_outstate_dim else hidden_dim
+        self.use_attention = use_attention
+
+        if self.use_attention:
+            self.enc_outstate_dim = enc_outstate_dim if enc_outstate_dim else hidden_dim
+        else:
+            self.enc_outstate_dim = 0
 
         self.embedding = nn.Embedding(self.output_dim, self.dec_embed_dim)
         self.gru = nn.GRU(input_size= self.dec_embed_dim + self.enc_outstate_dim, # to concat attention_output
@@ -80,10 +86,10 @@ class Decoder(nn.Module):
             )
 
         ##----- Attention ----------
-
-        self.W1 = nn.Linear( self.enc_outstate_dim, self.dec_hidden_dim)
-        self.W2 = nn.Linear( self.dec_hidden_dim, self.dec_hidden_dim)
-        self.V = nn.Linear( self.dec_hidden_dim, 1)
+        if self.use_attention:
+            self.W1 = nn.Linear( self.enc_outstate_dim, self.dec_hidden_dim)
+            self.W2 = nn.Linear( self.dec_hidden_dim, self.dec_hidden_dim)
+            self.V = nn.Linear( self.dec_hidden_dim, 1)
 
     def attention(self, x, hidden, enc_output):
         '''
@@ -123,6 +129,8 @@ class Decoder(nn.Module):
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size
         '''
+        assert (hidden is not None) or self.use_attention, "No use of a decoder with No attention and No Hidden"
+
         batch_sz = x.shape[0]
 
         # x (batch_size, 1, dec_embed_dim) -> after embedding
@@ -133,10 +141,12 @@ class Decoder(nn.Module):
             hidden = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
 
-        # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
-        # aw: (batch_size, max_length, 1)
-        x, aw = self.attention( x, hidden, enc_output)
-
+        if self.use_attention:
+            # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
+            # aw: (batch_size, max_length, 1)
+            x, aw = self.attention( x, hidden, enc_output)
+        else:
+            x, aw = x, 0
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, n_layers, hidden_size)
@@ -161,14 +171,17 @@ class Seq2Seq(nn.Module):
         self.device = device
         self.pass_enc2dec_hid = pass_enc2dec_hid
 
-        assert decoder.enc_outstate_dim == encoder.enc_directions*encoder.enc_hidden_dim,"Set `enc_out_dim` correctly in decoder"
         if self.pass_enc2dec_hid:
             assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Size of encoder and decoder must be same, or unset `pass_enc2dec_hid`"
+        if decoder.use_attention:
+            assert decoder.enc_outstate_dim == encoder.enc_directions*encoder.enc_hidden_dim,"Set `enc_out_dim` correctly in decoder"
+        assert self.pass_enc2dec_hid or decoder.use_attention, "No use of a decoder with No attention and No Hidden from Encoder"
 
-        #TODO: Support Different Hidden_size for Enc&Dec; Modify the ConvLayer to facilitate
-        self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
-        self.dec_hid_1ax = decoder.dec_layers
-        self.e2d_hidden_conv = nn.Conv1d(self.enc_hid_1ax, self.dec_hid_1ax, 1)
+        if self.pass_enc2dec_hid:
+            #TODO: Support Different Hidden_size for Enc&Dec; Modify the ConvLayer to facilitate
+            self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
+            self.dec_hid_1ax = decoder.dec_layers
+            self.e2d_hidden_conv = nn.Conv1d(self.enc_hid_1ax, self.dec_hid_1ax, 1)
 
     def enc2dec_hidden(self, enc_hidden):
         """
