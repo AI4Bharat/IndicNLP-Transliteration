@@ -4,21 +4,33 @@ import random
 
 class Encoder(nn.Module):
     def __init__(self, input_dim, embed_dim, hidden_dim ,
-                       layers = 1, dropout = 0, bidirectional =False,
-                       device = "cpu"):
+                       rnn_type = 'gru', layers = 1,
+                       bidirectional =False,
+                       dropout = 0, device = "cpu"):
         super(Encoder, self).__init__()
 
-        self.device = device
         self.input_dim = input_dim #src_vocab_sz
+        self.enc_embed_dim = embed_dim
+        self.enc_hidden_dim = hidden_dim
+        self.enc_rnn_type = rnn_type
         self.enc_layers = layers
         self.enc_directions = 2 if bidirectional else 1
-        self.enc_hidden_dim = hidden_dim
-        self.enc_embed_dim = embed_dim
+        self.device = device
+
         self.embedding = nn.Embedding(self.input_dim, self.enc_embed_dim)
-        self.enc_gru = nn.GRU(input_size= self.enc_embed_dim,
+
+        if self.enc_rnn_type == "gru":
+            self.enc_rnn = nn.GRU(input_size= self.enc_embed_dim,
                           hidden_size= self.enc_hidden_dim,
                           num_layers= self.enc_layers,
                           bidirectional= bidirectional)
+        elif self.enc_rnn_type == "lstm":
+            self.enc_rnn = nn.LSTM(input_size= self.enc_embed_dim,
+                          hidden_size= self.enc_hidden_dim,
+                          num_layers= self.enc_layers,
+                          bidirectional= bidirectional)
+        else:
+            raise Exception("unknown RNN type mentioned")
 
     def forward(self, x, x_sz, hidden = None):
         """
@@ -28,19 +40,14 @@ class Encoder(nn.Module):
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
 
-        if hidden is None:
-            # hidden: n_layer*num_directions, batch_size, hidden_dim
-            hidden = torch.zeros((self.enc_layers * self.enc_directions, batch_sz,
-                        self.enc_hidden_dim )).to(self.device)
-
         ## pack the padded data
         # x: max_length, batch_size, enc_embed_dim -> for pack_pad
         x = x.permute(1,0,2)
         x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, batch_size, enc_embed_dim
-        # hidden: n_layer, batch_size, hidden_dim*num_directions
-        output, hidden = self.enc_gru(x, hidden) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        # hidden: n_layer, batch_size, hidden_dim*num_directions | if LSTM (h_n, c_n)
+        output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, hidden_dim)
@@ -56,29 +63,40 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, output_dim, embed_dim, hidden_dim,
-                       layers = 1, dropout = 0,
+                       rnn_type = 'gru', layers = 1,
                        use_attention = True,
-                       enc_outstate_dim = None, # enc_directions *enc_hidden_dim
-                       device = "cpu"):
+                       enc_outstate_dim = None, # enc_directions * enc_hidden_dim
+                       dropout = 0, device = "cpu"):
         super(Decoder, self).__init__()
 
-        self.device = device
         self.output_dim = output_dim #tgt_vocab_sz
         self.dec_hidden_dim = hidden_dim
         self.dec_embed_dim = embed_dim
+        self.dec_rnn_type = rnn_type
         self.dec_layers = layers
         self.use_attention = use_attention
-
+        self.device = device
         if self.use_attention:
             self.enc_outstate_dim = enc_outstate_dim if enc_outstate_dim else hidden_dim
         else:
             self.enc_outstate_dim = 0
 
+
         self.embedding = nn.Embedding(self.output_dim, self.dec_embed_dim)
-        self.gru = nn.GRU(input_size= self.dec_embed_dim + self.enc_outstate_dim, # to concat attention_output
+
+        if self.dec_rnn_type == 'gru':
+            self.dec_rnn = nn.GRU(input_size= self.dec_embed_dim + self.enc_outstate_dim, # to concat attention_output
                           hidden_size= self.dec_hidden_dim, # previous Hidden
                           num_layers= self.dec_layers,
                           batch_first = True )
+        elif self.dec_rnn_type == "lstm":
+            self.dec_rnn = nn.LSTM(input_size= self.dec_embed_dim + self.enc_outstate_dim, # to concat attention_output
+                          hidden_size= self.dec_hidden_dim, # previous Hidden
+                          num_layers= self.dec_layers,
+                          batch_first = True )
+        else:
+            raise Exception("unknown RNN type mentioned")
+
         self.fc = nn.Sequential(
             nn.Linear(self.dec_hidden_dim, self.dec_embed_dim), nn.LeakyReLU(),
             # nn.Linear(self.dec_embed_dim, self.dec_embed_dim), nn.LeakyReLU(), # removing to reduce size
@@ -100,15 +118,15 @@ class Decoder(nn.Module):
 
         ## perform addition to calculate the score
 
-        # hidden_with_time_axis shape == (batch_size, 1, hidden_dim)
+        # hidden_with_time_axis: batch_size, 1, hidden_dim
         ## hidden_with_time_axis = hidden.permute(1, 0, 2) ## replaced with below 2lines
         hidden_with_time_axis = torch.sum(hidden, axis=0)
         hidden_with_time_axis = hidden_with_time_axis.unsqueeze(1)
 
-        # score: (batch_size, max_length, hidden_dim)
+        # score: batch_size, max_length, hidden_dim
         score = torch.tanh(self.W1(enc_output) + self.W2(hidden_with_time_axis))
 
-        # attention_weights: (batch_size, max_length, 1)
+        # attention_weights: batch_size, max_length, 1
         # we get 1 at the last axis because we are applying score to self.V
         attention_weights = torch.softmax(self.V(score), dim=1)
 
@@ -127,19 +145,22 @@ class Decoder(nn.Module):
         '''
         x: (batch_size, 1)
         enc_output: batch_size, max_length, dec_embed_dim
-        hidden: n_layer, batch_size, hidden_size
+        hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
         '''
-        assert (hidden is not None) or self.use_attention, "No use of a decoder with No attention and No Hidden"
+        if (hidden is None) and (self.use_attention is False):
+            raise Exception( "No use of a decoder with No attention and No Hidden")
 
         batch_sz = x.shape[0]
 
-        # x (batch_size, 1, dec_embed_dim) -> after embedding
-        x = self.embedding(x)
-
         if hidden is None:
             # hidden: n_layers, batch_size, hidden_dim
-            hidden = torch.zeros((self.dec_layers, batch_sz,
+            hid_for_att = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
+        elif self.dec_rnn_type == 'lstm':
+            hid_for_att = hidden[1] # c_n
+
+        # x (batch_size, 1, dec_embed_dim) -> after embedding
+        x = self.embedding(x)
 
         if self.use_attention:
             # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
@@ -150,8 +171,8 @@ class Decoder(nn.Module):
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, n_layers, hidden_size)
-        # hidden: n_layers, batch_size, hidden_size
-        output, hidden = self.gru(x, hidden)
+        # hidden: n_layers, batch_size, hidden_size | if LSTM (h_n, c_n)
+        output, hidden = self.dec_rnn(x, hidden) if hidden is not None else self.dec_rnn(x)
 
         # output shape == (batch_size * 1, hidden_size)
         output =  output.view(-1, output.size(2))
@@ -170,15 +191,26 @@ class Seq2Seq(nn.Module):
         self.decoder = decoder
         self.device = device
         self.pass_enc2dec_hid = pass_enc2dec_hid
+        _force_en2dec_hid_conv = False
 
         if self.pass_enc2dec_hid:
-            assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Size of encoder and decoder must be same, or unset `pass_enc2dec_hid`"
+            assert decoder.dec_hidden_dim == encoder.enc_hidden_dim, "Hidden Dimension of encoder and decoder must be same, or unset `pass_enc2dec_hid`"
         if decoder.use_attention:
             assert decoder.enc_outstate_dim == encoder.enc_directions*encoder.enc_hidden_dim,"Set `enc_out_dim` correctly in decoder"
         assert self.pass_enc2dec_hid or decoder.use_attention, "No use of a decoder with No attention and No Hidden from Encoder"
 
-        if self.pass_enc2dec_hid:
-            #TODO: Support Different Hidden_size for Enc&Dec; Modify the ConvLayer to facilitate
+
+        self.use_conv_4_enc2dec_hid = False
+        if  (
+              ( self.pass_enc2dec_hid and
+                (encoder.enc_directions * encoder.enc_layers != decoder.dec_layers)
+              )
+              or _force_en2dec_hid_conv
+            ):
+            if encoder.enc_rnn_type == "lstm" or encoder.enc_rnn_type == "lstm":
+                raise Exception("conv for enc2dec_hid not implemented; Change the layer numbers appropriately")
+
+            self.use_conv_4_enc2dec_hid = True
             self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
             self.dec_hid_1ax = decoder.dec_layers
             self.e2d_hidden_conv = nn.Conv1d(self.enc_hid_1ax, self.dec_hid_1ax, 1)
@@ -186,8 +218,8 @@ class Seq2Seq(nn.Module):
     def enc2dec_hidden(self, enc_hidden):
         """
         enc_hidden: n_layer, batch_size, hidden_dim*num_directions
+        TODO: Implement the logic for LSTm bsed model
         """
-        batch_sz = enc_hidden.shape[1]
         # hidden: batch_size, enc_layer*num_directions, enc_hidden_dim
         hidden = enc_hidden.permute(1,0,2).contiguous()
         # hidden: batch_size, dec_layers, dec_hidden_dim -> [N,C,Tstep]
@@ -212,10 +244,13 @@ class Seq2Seq(nn.Module):
         enc_output, enc_hidden = self.encoder(src, src_sz)
 
         if self.pass_enc2dec_hid:
-            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            if self.use_conv_4_enc2dec_hid:
+                dec_hidden = self.enc2dec_hidden(enc_hidden)
+            else:
+                dec_hidden = enc_hidden
         else:
-            # dec_hidden: Will be initialized to zeros internally
+            # dec_hidden -> Will be initialized to zeros internally
             dec_hidden = None
 
         # pred_vecs: (batch_size, output_dim, sequence_sz) -> shape required for CELoss
