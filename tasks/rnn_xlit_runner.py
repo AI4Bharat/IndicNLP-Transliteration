@@ -67,6 +67,7 @@ enc_emb_dim = 256
 dec_emb_dim = 256
 enc_hidden_dim = 512
 dec_hidden_dim = 512
+rnn_type = "lstm"
 enc2dec_hid = True
 attention = False
 enc_layers = 2
@@ -77,12 +78,12 @@ enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
 
 enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
                 hidden_dim= enc_hidden_dim,
-                layers= enc_layers,
+                rnn_type = rnn_type, layers= enc_layers,
                 dropout= m_dropout, device = device,
                 bidirectional= enc_bidirect)
 dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 hidden_dim= dec_hidden_dim,
-                layers= dec_layers,
+                rnn_type = rnn_type, layers= dec_layers,
                 dropout= m_dropout,
                 use_attention = attention,
                 enc_outstate_dim= enc_outstate_dim,
