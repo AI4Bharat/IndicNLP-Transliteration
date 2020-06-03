@@ -113,14 +113,16 @@ class Decoder(nn.Module):
         '''
         x: (batch_size, 1, dec_embed_dim) -> after Embedding
         enc_output: batch_size, max_length, enc_hidden_dim *num_directions
-        hidden: n_layers, batch_size, hidden_size
+        hidden: n_layers, batch_size, hidden_size | if LSTM (h_n, c_n)
         '''
 
         ## perform addition to calculate the score
 
         # hidden_with_time_axis: batch_size, 1, hidden_dim
         ## hidden_with_time_axis = hidden.permute(1, 0, 2) ## replaced with below 2lines
-        hidden_with_time_axis = torch.sum(hidden, axis=0)
+        hidden_with_time_axis = torch.sum(hidden, axis=0) if self.dec_rnn_type != "lstm" \
+                                else torch.sum(hidden[0], axis=0) # h_n
+
         hidden_with_time_axis = hidden_with_time_axis.unsqueeze(1)
 
         # score: batch_size, max_length, hidden_dim
