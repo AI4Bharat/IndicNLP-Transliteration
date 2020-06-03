@@ -29,14 +29,14 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 3
+batch_size = 32
 acc_grad = 1
-learning_rate = 1e-4
-teacher_forcing, teach_force_till = 0.50, 2
+learning_rate = 1e-5
+teacher_forcing, teach_force_till, teach_decay_pereph = 0.50, 5, 0.05
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/maithili/MaiEn_ann1_train.json', file_map = "LangEn",
                         padding=True)
 
 ## For monoLing
@@ -49,7 +49,7 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-test.json', file_map = "LangEn",
+                        json_file='data/maithili/MaiEn_ann1_test.json', file_map = "LangEn",
                         padding=True)
 
 
@@ -115,8 +115,9 @@ def loss_estimator(pred, truth):
     return torch.mean(loss_)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
-                             weight_decay=1e-5)
+                             weight_decay=0)
 
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 #===============================================================================
 
@@ -131,6 +132,7 @@ if __name__ =="__main__":
         acc_loss = 0
         running_loss = []
         if epoch >= teach_force_till: teacher_forcing = 0
+        else: teacher_forcing = max(0, teacher_forcing - teach_decay_pereph)
 
         for ith, (src, tgt, src_sz) in enumerate(train_dataloader):
 
@@ -148,6 +150,7 @@ if __name__ =="__main__":
             if ( (ith+1) % acc_grad == 0):
                 optimizer.step()
                 optimizer.zero_grad()
+
                 print('epoch[{}/{}], MiniBatch-{} loss:{:.4f}'
                     .format(epoch+1, num_epochs, (ith+1)//acc_grad, acc_loss.data))
                 running_loss.append(acc_loss.item())
@@ -185,3 +188,6 @@ if __name__ =="__main__":
             torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
+
+        # LR step
+        # scheduler.step()
