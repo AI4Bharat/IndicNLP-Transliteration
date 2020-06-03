@@ -294,10 +294,13 @@ class Seq2Seq(nn.Module):
         enc_output, enc_hidden = self.encoder(src_, src_sz)
 
         if self.pass_enc2dec_hid:
-            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            if self.use_conv_4_enc2dec_hid:
+                dec_hidden = self.enc2dec_hidden(enc_hidden)
+            else:
+                dec_hidden = enc_hidden
         else:
-            # dec_hidden: Will be initialized to zeros internally
+            # dec_hidden -> Will be initialized to zeros internally
             dec_hidden = None
 
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
@@ -343,10 +346,13 @@ class Seq2Seq(nn.Module):
         enc_output, enc_hidden = self.encoder(src_, src_sz)
 
         if self.pass_enc2dec_hid:
-            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-            init_dec_hidden = self.enc2dec_hidden(enc_hidden)
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            if self.use_conv_4_enc2dec_hid:
+                init_dec_hidden = self.enc2dec_hidden(enc_hidden)
+            else:
+                init_dec_hidden = enc_hidden
         else:
-            # dec_hidden: Will be initialized to zeros internally
+            # dec_hidden -> Will be initialized to zeros internally
             init_dec_hidden = None
 
         # top_pred[][0] = Σ-log_softmax
@@ -430,10 +436,13 @@ class Seq2Seq(nn.Module):
         enc_output, enc_hidden = self.encoder(src_, src_sz)
 
         if self.pass_enc2dec_hid:
-            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
-            dec_hidden = self.enc2dec_hidden(enc_hidden)
+        # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            if self.use_conv_4_enc2dec_hid:
+                dec_hidden = self.enc2dec_hidden(enc_hidden)
+            else:
+                dec_hidden = enc_hidden
         else:
-            # dec_hidden: Will be initialized to zeros internally
+            # dec_hidden -> Will be initialized to zeros internally
             dec_hidden = None
 
         # dec_input: (1, 1)
