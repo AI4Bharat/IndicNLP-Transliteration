@@ -176,10 +176,10 @@ class Decoder(nn.Module):
         # hidden: n_layers, batch_size, hidden_size | if LSTM (h_n, c_n)
         output, hidden = self.dec_rnn(x, hidden) if hidden is not None else self.dec_rnn(x)
 
-        # output shape == (batch_size * 1, hidden_size)
+        # output :shp: (batch_size * 1, hidden_size)
         output =  output.view(-1, output.size(2))
 
-        # output shape == (batch_size * 1, output_dim)
+        # output :shp: (batch_size * 1, output_dim)
         output = self.fc(output)
 
         return output, hidden, aw
@@ -305,6 +305,7 @@ class Seq2Seq(nn.Module):
             # dec_hidden -> Will be initialized to zeros internally
             dec_hidden = None
 
+        # pred_arr: (sequence_sz, 1) -> shape required for CELoss
         pred_arr = torch.zeros(max_tgt_sz, 1).to(self.device)
         if debug: attend_weight_arr = torch.zeros(max_tgt_sz, len(src)).to(self.device)
 
@@ -312,9 +313,13 @@ class Seq2Seq(nn.Module):
         dec_input = start_tok.view(1,1) # initialize to start token
 
         for t in range(max_tgt_sz):
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            # dec_output: batch_size, output_dim
+            # dec_input: (batch_size, 1)
             dec_output, dec_hidden, aw = self.decoder( dec_input,
                                                dec_hidden,
                                                enc_output,  )
+            # prediction :shp: (1,1)
             prediction = torch.argmax(dec_output, dim=1)
             dec_input = prediction.unsqueeze(1)
             pred_arr[t] = prediction
@@ -324,6 +329,7 @@ class Seq2Seq(nn.Module):
                 break
 
         if debug: return pred_arr.squeeze(), attend_weight_arr
+        # pred_arr :shp: (sequence_len)
         return pred_arr.squeeze()
 
     def active_beam_inference(self, src, beam_width=3, max_tgt_sz=50):
@@ -475,4 +481,94 @@ class Seq2Seq(nn.Module):
 
         return pred_tnsr_list
 
+
+
+class CorrectionNet(nn.Module):
+    """ Network for correcting the prediction of char based seq2seq
+    """
+    def __init__(self, voc_dim, embed_dim, hidden_dim ,
+                       rnn_type = 'gru', layers = 1,
+                       bidirectional = True,
+                       dropout = 0, device = "cpu"):
+        super(CorrectionNet, self).__init__()
+
+        self.voc_dim = voc_dim #src_vocab_sz
+        self.embed_dim = embed_dim
+        self.hidden_dim = hidden_dim
+        self.rnn_type = rnn_type
+        self.layers = layers
+        self.directions = 2 if bidirectional else 1
+        self.device = device
+
+        self.embedding = nn.Embedding(self.voc_dim, self.embed_dim)
+
+        if self.rnn_type == "gru":
+            self.corr_rnn = nn.GRU(input_size= self.embed_dim,
+                          hidden_size= self.hidden_dim,
+                          num_layers= self.layers,
+                          bidirectional= bidirectional)
+        elif self.enc_rnn_type == "lstm":
+            self.corr_rnn = nn.LSTM(input_size= self.embed_dim,
+                          hidden_size= self.hidden_dim,
+                          num_layers= self.layers,
+                          bidirectional= bidirectional)
+        else:
+            raise Exception("unknown RNN type mentioned")
+
+        self.ffnn = nn.Sequential(
+            nn.Linear(self.hidden_dim * self.directions, self.embed_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.embed_dim, self.voc_dim),
+            )
+
+
+    def forward(self, src, tgt, src_sz):
+        """
+        src: batch_size, max_length, embed_dim
+        src_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
+        """
+        batch_size = src.shape[0]
+        # x: batch_size, max_length, embed_dim
+        x = self.embedding(src)
+
+        ## pack the padded data
+        # x: max_length, batch_size, enc_embed_dim -> for pack_pad
+        x = x.permute(1,0,2)
+        x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False) # unpad
+
+        # output: packed_size, batch_size, enc_embed_dim
+        # _(hidden): n_layer, batch_size, hidden_dim*num_directions | if LSTM (h_n, c_n)
+        output, _ = self.corr_rnn(x)
+
+        ## pad the sequence to the max length in the batch
+        # output: max_length, batch_size, hidden_dim)
+        output, _ = nn.utils.rnn.pad_packed_sequence(output)
+        # output: batch_size, mx_seq_length, hidden_dim
+        output = output.permute(1,0,2)
+
+        #output :shp: batch_size, mx_seq_length, voc_dim
+        output = self.ffnn(output)
+
+        #output :shp: batch_size, voc_dim, mx_seq_length
+        output = output.permute(0,2,1)
+
+        #predict_vecs: batch_size, max_length, embed_dim
+        predict_vecs = torch.zeros(batch_size, self.voc_dim, tgt.size(1) ).to(self.device)
+        # sometimes the output size crosses max_seq_size of target
+        curr_sz = min( output.shape[2], tgt.size(1) )
+        predict_vecs[:,:,:curr_sz] = output[:,:,:curr_sz]
+
+        return predict_vecs
+
+    def inference(self, x):
+        x_sz = torch.tensor([len(src)])
+
+        #pred_vecs :shp: 1, voc_dim, mx_seq_length
+        pred_vecs = self.forward(x, x_sz)
+        #pred_vecs :shp: (mx_seq_length, voc_dim)
+        pred_vecs = pred_vecs.permute(0,2,1).squeeze()
+        #pred_vecs :shp: (sequence_len, 1)
+        pred_arr = torch.argmax(pred_vecs, dim=1)
+
+        return pred_arr.squeeze()
 
