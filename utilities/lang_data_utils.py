@@ -170,9 +170,9 @@ class XlitData(Dataset):
                       If unset computes maximum of source, target seperate
         """
         #Load data
-        if file_map == "LangEn":
+        if file_map == "LangEn": # output-input
             tgt_str, src_str = self._json2_x_y(json_file)
-        elif file_map == "EnLang":
+        elif file_map == "EnLang": # input-output
             src_str, tgt_str = self._json2_x_y(json_file)
         else:
             raise Exception('Unknown JSON structure')

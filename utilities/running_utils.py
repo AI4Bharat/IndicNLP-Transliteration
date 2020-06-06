@@ -1,4 +1,7 @@
 import enum
+import sys
+import os
+import json
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -57,3 +60,31 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
     conf_plot.figure.savefig( save_path + "/"+in_word+"_attention.png")
 
     plt.clf()
+
+
+def compose_corr_dataset(pred_file = "", truth_file = "",
+                         save_path = ""  ):
+    """
+    Function to create Json for Correction Network from the truth and predition of models
+    Return: Path of the composed file { Output: [Input] }
+    pred_file: EnLang
+    truth_file: LangEn
+    """
+    pred_dict = json.load(open(pred_file))
+    truth_dict = json.load(open(truth_file))
+
+
+    out_dict = {}
+    for k in truth_dict:
+        temp_set = set()
+        for v in truth_dict[k]:
+            temp_set.update(pred_dict[v])
+        out_dict[k] = list(temp_set)
+
+    save_file = save_path + "Corr_set_"+os.path.basename(truth_file)
+    with open(save_file ,"w", encoding = "utf-8") as f:
+        json.dump(out_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+
+    return save_file
+
+
