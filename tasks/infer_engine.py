@@ -5,26 +5,41 @@ import utilities.running_utils as rutl
 hi_glyph = GlyphStrawboss("hi")
 en_glyph = GlyphStrawboss("en")
 
-##============ RNN Based =======================================================
+##=============== Models =======================================================
 import torch
-from hypotheses.training_85.recurrent_nets_85 import model
-weight_path = "hypotheses/training_85/Training_85_model.pth"
+DEVICE = "cpu"
+
+from hypotheses.training_mai_103.recurrent_nets_mai_103 import model
+weight_path = "hypotheses/training_mai_103/weights/Training_mai_103_model.pth"
 # voc_sanitize = VocabSanitizer("data/X_word_list.json")
 
-weights = torch.load( weight_path, map_location=torch.device('cpu'))
+weights = torch.load( weight_path, map_location=torch.device(DEVICE))
 model.load_state_dict(weights)
 model.eval()
+
+# --- Correction model ---
+from hypotheses.training_mai_103.recurrent_nets_mai_103 import corr_model
+corr_weight_path = "hypotheses/training_mai_103/weights/Training_mai_103_corrnet.pth"
+
+corr_weights = torch.load( corr_weight_path, map_location=torch.device(DEVICE))
+corr_model.load_state_dict(corr_weights)
+corr_model.eval()
+
+
+##==============================================================================
 
 def inferencer(word, topk = 3):
     if topk == 1:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
         out = model.inference(in_vec)
+        out = corr_model.inference(out)
         result =[ hi_glyph.xlitvec2word(out.numpy()) ]
         return result
     else:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word))
         ## change to active or passive beam
         out_list = model.active_beam_inference(in_vec, beam_width = topk)
+        out_list = [ corr_model.inference(out) for out in out_list]
         result = [ hi_glyph.xlitvec2word(out.numpy()) for out in out_list]
         # result = voc_sanitize.reposition(result)
         return result
