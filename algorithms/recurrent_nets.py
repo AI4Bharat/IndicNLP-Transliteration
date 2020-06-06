@@ -524,19 +524,20 @@ class CorrectionNet(nn.Module):
 
     def forward(self, src, tgt, src_sz):
         """
-        src: batch_size, max_length, embed_dim
-        src_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
+        src: (batch_size, sequence_len.padded)
+        tgt: (batch_size, sequence_len.padded)
+        src_sz: [batch_size, 1] -  Unpadded sequence lengths
         """
         batch_size = src.shape[0]
         # x: batch_size, max_length, embed_dim
         x = self.embedding(src)
 
         ## pack the padded data
-        # x: max_length, batch_size, enc_embed_dim -> for pack_pad
+        # x: max_length, batch_size, embed_dim -> for pack_pad
         x = x.permute(1,0,2)
         x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False) # unpad
 
-        # output: packed_size, batch_size, enc_embed_dim
+        # output: packed_size, batch_size, embed_dim
         # _(hidden): n_layer, batch_size, hidden_dim*num_directions | if LSTM (h_n, c_n)
         output, _ = self.corr_rnn(x)
 
@@ -560,15 +561,36 @@ class CorrectionNet(nn.Module):
 
         return predict_vecs
 
-    def inference(self, x):
-        x_sz = torch.tensor([len(src)])
+    def inference(self, src):
+        '''
+        src: (sequence_length)
+        '''
+        src_sz = torch.tensor([len(src)])
+        src_ = src.unsqueeze(0).to(dtype=torch.long)
 
-        #pred_vecs :shp: 1, voc_dim, mx_seq_length
-        pred_vecs = self.forward(x, x_sz)
+        # x: 1, max_length, embed_dim
+        x = self.embedding(src_)
+
+        # x: max_length, 1, embed_dim -> for pack_pad
+        x = x.permute(1,0,2)
+        x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False) # unpad
+
+        # output: packed_size, 1, embed_dim
+        output, _ = self.corr_rnn(x)
+
+        # output: max_length, 1, hidden_dim)
+        output, _ = nn.utils.rnn.pad_packed_sequence(output)
+        # output: 1, mx_seq_length, hidden_dim
+        output = output.permute(1,0,2)
+
+        #output :shp: 1, mx_seq_length, voc_dim
+        output = self.ffnn(output)
+
         #pred_vecs :shp: (mx_seq_length, voc_dim)
-        pred_vecs = pred_vecs.permute(0,2,1).squeeze()
+        pred_vecs = output.squeeze()
         #pred_vecs :shp: (sequence_len, 1)
         pred_arr = torch.argmax(pred_vecs, dim=1)
 
         return pred_arr.squeeze()
+
 
