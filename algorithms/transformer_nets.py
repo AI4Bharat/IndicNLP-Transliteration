@@ -70,6 +70,7 @@ class XFMR_Neophyte(nn.Module):
                     dropout = 0,
                     device = "cpu"):
         super(XFMR_Neophyte, self).__init__()
+        self.device = device
 
         self.input_dim = input_vcb_sz
         self.output_dim = output_vcb_sz
