@@ -3,6 +3,7 @@
 
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 import os
 import sys
 from tqdm import tqdm
@@ -69,9 +70,9 @@ enc_hidden_dim = 512
 dec_hidden_dim = 512
 rnn_type = "lstm"
 enc2dec_hid = True
-attention = False
-enc_layers = 2
-dec_layers = 4
+attention = True
+enc_layers = 1
+dec_layers = 2
 m_dropout = 0
 enc_bidirect = True
 enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
@@ -94,6 +95,15 @@ model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid,
 model = model.to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
+
+## ----- Load Embeds -----
+
+hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
+dec.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+
+en_emb_vecs = np.load("data/embeds/en_charemb_fasttext.npy")
+enc.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
+
 
 ##------ Model Details ---------------------------------------------------------
 # rutl.count_train_param(model)
