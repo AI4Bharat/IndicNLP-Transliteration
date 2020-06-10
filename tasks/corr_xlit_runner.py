@@ -8,7 +8,7 @@ import os
 import sys
 from tqdm import tqdm
 import utilities.running_utils as rutl
-from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData
+from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData, compose_corr_dataset
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import CorrectionNet, Encoder, Decoder, Seq2Seq
 
@@ -37,7 +37,7 @@ acc_grad = 1
 learning_rate = 1e-3
 pretrain_wgt_path = None
 
-train_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_train.json",
+train_file = compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_train.json",
                                     truth_file= "data/maithili/MaiEn_ann1_train.json",
                                     save_path= LOG_PATH)
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
@@ -46,7 +46,7 @@ train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-val_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_valid.json",
+val_file = compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_valid.json",
                                     truth_file= "data/maithili/MaiEn_ann1_valid.json",
                                     save_path= LOG_PATH)
 
