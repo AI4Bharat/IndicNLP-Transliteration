@@ -330,7 +330,7 @@ class Seq2Seq(nn.Module):
 
         if debug: return pred_arr.squeeze(), attend_weight_arr
         # pred_arr :shp: (sequence_len)
-        return pred_arr.squeeze()
+        return pred_arr.squeeze().to(dtype=torch.long)
 
     def active_beam_inference(self, src, beam_width=3, max_tgt_sz=50):
         ''' Search based decoding

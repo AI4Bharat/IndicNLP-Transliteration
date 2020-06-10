@@ -3,13 +3,14 @@
 
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 import os
 import sys
 from tqdm import tqdm
 import utilities.running_utils as rutl
 from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData
 from utilities.logging_utils import LOG2CSV
-from algorithms.recurrent_nets import CorrectionNet
+from algorithms.recurrent_nets import CorrectionNet, Encoder, Decoder, Seq2Seq
 
 
 ##===== Init Setup =============================================================
@@ -41,7 +42,7 @@ train_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103
                                     save_path= LOG_PATH)
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file=train_file, file_map = "LangEn", #{ Output: [Input] }
-                        padding=True)
+                        padding=True, max_seq_size=50)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
@@ -51,7 +52,7 @@ val_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/a
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file=val_file, file_map = "LangEn", # { Output: [Input] }
-                        padding=True)
+                        padding=True, max_seq_size=50)
 val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
@@ -64,27 +65,65 @@ test_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/
 
 ##===== Model Configuration =================================================
 
-voc_dim = src_glyph.size()
-emb_dim = 512
-hidden_dim = 512
-rnn_type = "gru"
-n_layers = 2
-m_dropout = 0
-bidirect = True
+# voc_dim = src_glyph.size()
+# emb_dim = 512
+# hidden_dim = 512
+# rnn_type = "gru"
+# n_layers = 1
+# m_dropout = 0
+# bidirect = True
 
-corr_model = CorrectionNet(voc_dim = voc_dim, embed_dim = emb_dim,
-                        hidden_dim = hidden_dim,
-                        rnn_type = 'gru', layers = n_layers,
-                        bidirectional = bidirect,
-                        dropout = 0, device = device)
+# corr_model = CorrectionNet(voc_dim = voc_dim, embed_dim = emb_dim,
+#                         hidden_dim = hidden_dim,
+#                         rnn_type = 'gru', layers = n_layers,
+#                         bidirectional = bidirect,
+#                         dropout = 0, device = device)
+# corr_model = corr_model.to(device)
+
+
+input_dim = src_glyph.size()
+output_dim = tgt_glyph.size()
+enc_emb_dim = 300
+dec_emb_dim = 300
+enc_hidden_dim = 512
+dec_hidden_dim = 512
+rnn_type = "lstm"
+enc2dec_hid = True
+attention = True
+enc_layers = 1
+dec_layers = 2
+m_dropout = 0
+enc_bidirect = True
+enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
+
+enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
+                hidden_dim= enc_hidden_dim,
+                rnn_type = rnn_type, layers= enc_layers,
+                dropout= m_dropout, device = device,
+                bidirectional= enc_bidirect)
+dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
+                hidden_dim= dec_hidden_dim,
+                rnn_type = rnn_type, layers= dec_layers,
+                dropout= m_dropout,
+                use_attention = attention,
+                enc_outstate_dim= enc_outstate_dim,
+                device = device,)
+
+corr_model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid,
+                device=device)
 corr_model = corr_model.to(device)
 
+
 ## ----------- Load Embedding ------------------
-pred_weight = torch.load("hypotheses/training_mai_103/Training_mai_103_model.pth",
-                            map_location=torch.device(device))
-model_dict = corr_model.state_dict()
-model_dict["embedding.weight"] = pred_weight["decoder.embedding.weight"]
-corr_model.load_state_dict(model_dict)
+# pred_weight = torch.load("hypotheses/training_mai_103/weights/Training_mai_103_model.pth",
+#                             map_location=torch.device(device))
+# corr_model.decoder.embedding.weight.data.copy_(pred_weight["decoder.embedding.weight"])
+# corr_model.encoder.embedding.weight.data.copy_(pred_weight["encoder.embedding.weight"])
+
+hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
+corr_model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+corr_model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+
 
 # corr_model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
@@ -105,6 +144,7 @@ def loss_estimator(pred, truth):
 
     mask = truth.ge(1).type(torch.FloatTensor).to(device)
     loss_ = criterion(pred, truth) * mask
+
     return torch.mean(loss_)
 
 optimizer = torch.optim.AdamW(corr_model.parameters(), lr=learning_rate,
@@ -175,7 +215,7 @@ if __name__ =="__main__":
         if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet-{}.pth".format(epoch))
+            torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet.pth")
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
 
