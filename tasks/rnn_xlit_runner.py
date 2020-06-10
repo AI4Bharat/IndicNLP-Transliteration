@@ -30,7 +30,7 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 32
+batch_size = 3
 acc_grad = 1
 learning_rate = 1e-5
 teacher_forcing, teach_force_till, teach_decay_pereph = 0.50, 5, 0.05
@@ -98,11 +98,11 @@ model = model.to(device)
 
 ## ----- Load Embeds -----
 
-hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
-dec.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+# hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
+# dec.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
-en_emb_vecs = np.load("data/embeds/en_charemb_fasttext.npy")
-enc.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
+# en_emb_vecs = np.load("data/embeds/en_charemb_fasttext.npy")
+# enc.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
 
 
 ##------ Model Details ---------------------------------------------------------
@@ -165,7 +165,7 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_grad, acc_loss.data))
                 running_loss.append(acc_loss.item())
                 acc_loss=0
-                #break
+                break
 
         LOG2CSV(running_loss, LOG_PATH+"trainLoss.csv")
 
@@ -191,10 +191,11 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
-        # if val_accuracy > best_accuracy:
-        if val_loss < best_loss:
-            print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
+        if val_accuracy > best_accuracy:
+        # if val_loss < best_loss:
+            print("***saving best optimal state [Loss:{} Accur:{}] ***".format(val_loss.data,val_accuracy.data) )
             best_loss = val_loss
+            best_accuracy = val_accuracy
             torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")

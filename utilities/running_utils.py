@@ -32,13 +32,17 @@ def count_train_param(model):
 
 
 def accuracy_score(pred_tnsr, tgt_tnsr):
-    '''Simple accuracy calculation for training
-    tgt-arr, pred-arr: torch tensors
+    '''Simple accuracy calculation for TRAINING phase
+    pred_tnsr: torch tensor :shp: (batch, seq_len)
+    tgt_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
     '''
-    if torch.equal(pred_tnsr.type(torch.long), tgt_tnsr):
-        return torch.tensor(1)
-    else:
-        return torch.tensor(0)
+    pred_seq = torch.argmax(pred_tnsr, dim=1)
+    batch_sz = pred_seq.shape[0]
+    crt_cnt = 0
+    for i in range(batch_sz):
+        if torch.equal(pred_seq[i,:], tgt_tnsr[i, :]):
+            crt_cnt += 1
+    return torch.tensor(crt_cnt/batch_sz)
 
 def attention_weight_plotter(out_word, in_word, attention_array, save_path = ""):
     '''
