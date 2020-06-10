@@ -180,7 +180,7 @@ if __name__ =="__main__":
                 v_output = model(src = v_src, tgt = v_tgt, src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
-                val_accuracy += rutl.accuracy_score(v_output, v_tgt)
+                val_accuracy += rutl.accuracy_score(v_output, v_tgt, tgt_glyph)
             #break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)

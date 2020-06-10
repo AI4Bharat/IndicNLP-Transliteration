@@ -260,7 +260,7 @@ class Seq2Seq(nn.Module):
 
         # dec_input: (batch_size, 1)
         dec_input = tgt[:,0].unsqueeze(1) # initialize to start token
-
+        pred_vecs[:,1,0] = 1 # Initialize to start tokens all batches
         for t in range(1, tgt.size(1)):
             # dec_hidden: dec_layers, batch_size , dec_hidden_dim
             # dec_output: batch_size, output_dim
@@ -312,7 +312,7 @@ class Seq2Seq(nn.Module):
 
         # dec_input: (batch_size, 1)
         dec_input = start_tok.view(1,1) # initialize to start token
-
+        pred_arr[0] = start_tok.view(1,1) # initialize to start token
         for t in range(max_tgt_sz):
             # dec_hidden: dec_layers, batch_size , dec_hidden_dim
             # dec_output: batch_size, output_dim

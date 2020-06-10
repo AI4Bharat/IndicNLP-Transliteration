@@ -31,7 +31,7 @@ def count_train_param(model):
     return train_params_count
 
 
-def accuracy_score(pred_tnsr, tgt_tnsr):
+def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
     '''Simple accuracy calculation for TRAINING phase
     pred_tnsr: torch tensor :shp: (batch, seq_len)
     tgt_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
@@ -40,7 +40,9 @@ def accuracy_score(pred_tnsr, tgt_tnsr):
     batch_sz = pred_seq.shape[0]
     crt_cnt = 0
     for i in range(batch_sz):
-        if torch.equal(pred_seq[i,:], tgt_tnsr[i, :]):
+        pred = glyph_obj.xlitvec2word(pred_seq[i,:].cpu().numpy())
+        tgt = glyph_obj.xlitvec2word(tgt_tnsr[i,:].cpu().numpy())
+        if pred == tgt:
             crt_cnt += 1
     return torch.tensor(crt_cnt/batch_sz)
 
