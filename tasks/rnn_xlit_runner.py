@@ -98,11 +98,11 @@ model = model.to(device)
 
 ## ----- Load Embeds -----
 
-# hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
-# dec.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+# hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
+# model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
-# en_emb_vecs = np.load("data/embeds/en_charemb_fasttext.npy")
-# enc.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
+# en_emb_vecs = np.load("data/embeds/en_char_512_ftxt.npy")
+# model.encoder.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
 
 
 ##------ Model Details ---------------------------------------------------------
@@ -165,7 +165,7 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_grad, acc_loss.data))
                 running_loss.append(acc_loss.item())
                 acc_loss=0
-                break
+                # break
 
         LOG2CSV(running_loss, LOG_PATH+"trainLoss.csv")
 
