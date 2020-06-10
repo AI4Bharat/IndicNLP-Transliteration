@@ -283,6 +283,7 @@ class Seq2Seq(nn.Module):
 
     def inference(self, src, max_tgt_sz=50, debug = 0):
         '''
+        single input only, No batch Inferencing
         src: (sequence_len)
         '''
         batch_size = 1
