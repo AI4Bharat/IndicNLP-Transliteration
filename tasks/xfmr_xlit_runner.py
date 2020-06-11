@@ -3,6 +3,7 @@
 
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 import os
 import sys
 from tqdm import tqdm
@@ -72,10 +73,19 @@ model = model.to(device)
 
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
+## ----- Load Embeds -----
+
+# hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
+# model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+
+en_emb_vecs = np.load("data/embeds/en_char_512_ftxt.npy")
+model.in2embed.weight.data.copy_(torch.from_numpy(en_emb_vecs))
+
+
 ##------ Model Details ---------------------------------------------------------
 rutl.count_train_param(model)
 print(model)
-# sys.exit()
+sys.exit()
 
 ##====== Optimizer Zone ===================================================================
 
