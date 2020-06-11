@@ -14,7 +14,7 @@ from algorithms.transformer_nets import XFMR_Neophyte
 
 ##===== Init Setup =============================================================
 MODE = rutl.RunMode.train
-INST_NAME = "xfmr-Training_Test"
+INST_NAME = "Training_Test"
 
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -29,14 +29,14 @@ src_glyph = GlyphStrawboss("en")
 tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 3
+batch_size = 10
 acc_grad = 1
 learning_rate = 1e-4
 pretrain_wgt_path = None
 max_char_size = 50
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/checkup-train.json', file_map = "LangEn",
+                        json_file='data/checkup-test.json', file_map = "LangEn",
                         padding=True, max_seq_size=max_char_size)
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
@@ -57,9 +57,9 @@ val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
 emb_vec_dim = 512
-n_layers = 6
-attention_head = 8
-feedforward_dim = 1024
+n_layers = 3
+attention_head = 16
+feedforward_dim = 512
 m_dropout = 0
 
 model = XFMR_Neophyte(input_vcb_sz = input_dim, output_vcb_sz = output_dim,
@@ -73,9 +73,9 @@ model = model.to(device)
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
 ##------ Model Details ---------------------------------------------------------
-# rutl.count_train_param(model)
-# print(model)
-
+rutl.count_train_param(model)
+print(model)
+# sys.exit()
 
 ##====== Optimizer Zone ===================================================================
 
@@ -101,6 +101,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
 if __name__ =="__main__":
 
     best_loss = float("inf")
+    best_accuracy = 0
     for epoch in range(num_epochs):
 
         #-------- Training -------------------
@@ -114,7 +115,7 @@ if __name__ =="__main__":
             tgt = tgt.to(device)
 
             #--- forward ------
-            output = model(src = src)
+            output = model(src = src, src_sz = src_sz)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
 
@@ -139,10 +140,9 @@ if __name__ =="__main__":
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
-                v_output = model(src = v_src)
+                v_output = model(src = v_src, src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
-
-                val_accuracy += (1 - val_loss)
+                val_accuracy += rutl.accuracy_score(v_output, v_tgt, tgt_glyph)
             #break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)
@@ -153,9 +153,11 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
-        if val_loss < best_loss:
+        if val_accuracy > best_accuracy:
+        # if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
+            best_accuracy = val_accuracy
             torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
