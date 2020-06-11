@@ -50,11 +50,11 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/maithili/MaiEn_ann1_test.json', file_map = "LangEn",
+                        json_file='data/maithili/MaiEn_ann1_valid.json', file_map = "LangEn",
                         padding=True)
 
 
-val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
+val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 # for i in range(len(train_dataset)):
