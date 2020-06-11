@@ -333,7 +333,7 @@ class MonoLMData(Dataset):
 
 ## ----- Correction Dataset -----
 
-def compose_corr_dataset(pred_file = "", truth_file = "",
+def compose_corr_dataset(pred_file, truth_file,
                          save_path = ""  ):
     """
     Function to create Json for Correction Network from the truth and predition of models
