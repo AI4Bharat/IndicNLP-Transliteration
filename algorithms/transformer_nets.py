@@ -86,7 +86,8 @@ class XFMR_Neophyte(nn.Module):
 
         self.in2embed = nn.Embedding(self.input_vcb_sz, self.vector_dim)
         # pos_encoder non-learnable layer
-        self.pos_encoder = PositionalEncoding(self.vector_dim, self.dropout)
+        self.pos_encoder = PositionalEncoding(self.vector_dim, self.dropout,
+                                                device = self.device)
 
         _enc_layer = nn.TransformerEncoderLayer(d_model= self.vector_dim,
                                                 nhead= self.atten_head,
@@ -159,12 +160,12 @@ class XFMR_Neophyte(nn.Module):
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, vector_dim, dropout=0, max_seq_len=50):
+    def __init__(self, vector_dim, dropout=0, max_seq_len=50, device = "cpu"):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         #pe :shp: (max_seq_len, vector_dim)
-        self.pe = torch.zeros(max_seq_len, vector_dim)
+        self.pe = torch.zeros(max_seq_len, vector_dim).to(device)
         position = torch.arange(0,max_seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, vector_dim, 2).float() * (-math.log(10000.0) / vector_dim))
         self.pe[:, 0::2] = torch.sin(position * div_term)
