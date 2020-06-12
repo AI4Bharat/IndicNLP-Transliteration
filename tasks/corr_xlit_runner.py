@@ -15,7 +15,7 @@ from algorithms.recurrent_nets import CorrectionNet, Encoder, Decoder, Seq2Seq
 
 ##===== Init Setup =============================================================
 MODE = rutl.RunMode.train
-INST_NAME = "training_mai_103"
+INST_NAME = "Training_mai_103"
 
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -53,10 +53,10 @@ val_file = compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_tr
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file=val_file, file_map = "LangEn", # { Output: [Input] }
                         padding=True, max_seq_size=50)
-val_dataloader = DataLoader(train_dataset, batch_size=batch_size,
+val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-test_file = rutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_test.json",
+test_file = compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_test.json",
                                     truth_file= "data/maithili/MaiEn_ann1_test.json",
                                     save_path= LOG_PATH)
 
@@ -118,9 +118,9 @@ corr_model = corr_model.to(device)
 # pred_weight = torch.load("hypotheses/training_mai_103/weights/Training_mai_103_model.pth",
 #                             map_location=torch.device(device))
 # corr_model.decoder.embedding.weight.data.copy_(pred_weight["decoder.embedding.weight"])
-# corr_model.encoder.embedding.weight.data.copy_(pred_weight["encoder.embedding.weight"])
+# corr_model.encoder.embedding.weight.data.copy_(pred_weight["decoder.embedding.weight"])
 
-hi_emb_vecs = np.load("data/embeds/hi_charemb_fasttext.npy")
+hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
 corr_model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 corr_model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
@@ -200,7 +200,7 @@ if __name__ =="__main__":
                 v_output = corr_model(src = v_src, tgt=v_tgt ,src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
-                val_accuracy += rutl.accuracy_score(v_output, v_tgt)
+                val_accuracy += rutl.accuracy_score(v_output, v_tgt, tgt_glyph)
             #break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)
@@ -211,8 +211,8 @@ if __name__ =="__main__":
                     LOG_PATH+"valLoss.csv")
 
         #-------- save Checkpoint -------------------
-        # if val_accuracy > best_accuracy:
-        if val_loss < best_loss:
+        if val_accuracy > best_accuracy:
+        # if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet.pth")
