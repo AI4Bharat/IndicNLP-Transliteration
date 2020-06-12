@@ -10,12 +10,12 @@ from tqdm import tqdm
 import utilities.running_utils as rutl
 from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData, compose_corr_dataset
 from utilities.logging_utils import LOG2CSV
-from algorithms.recurrent_nets import CorrectionNet, Encoder, Decoder, Seq2Seq
+from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq, CorrectionBasicNet
 
 
 ##===== Init Setup =============================================================
 MODE = rutl.RunMode.train
-INST_NAME = "Training_mai_103"
+INST_NAME = "Training_Test"
 
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -28,11 +28,10 @@ if not os.path.exists(LOG_PATH): os.makedirs(LOG_PATH)
 
 ##===== Running Configuration =================================================
 
-src_glyph = GlyphStrawboss("hi")
-tgt_glyph = GlyphStrawboss("hi")
+src_glyph = tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
-batch_size = 32
+batch_size = 128
 acc_grad = 1
 learning_rate = 1e-3
 pretrain_wgt_path = None
@@ -63,77 +62,25 @@ test_file = compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_t
 # for i in range(len(train_dataset)):
 #     print(train_dataset.__getitem__(i))
 
-##===== Model Configuration =================================================
+##======== Model Configuration =================================================
 
-# voc_dim = src_glyph.size()
-# emb_dim = 512
-# hidden_dim = 512
-# rnn_type = "gru"
-# n_layers = 1
-# m_dropout = 0
-# bidirect = True
-
-# corr_model = CorrectionNet(voc_dim = voc_dim, embed_dim = emb_dim,
-#                         hidden_dim = hidden_dim,
-#                         rnn_type = 'gru', layers = n_layers,
-#                         bidirectional = bidirect,
-#                         dropout = 0, device = device)
-# corr_model = corr_model.to(device)
-
-
-input_dim = src_glyph.size()
-output_dim = tgt_glyph.size()
-enc_emb_dim = 300
-dec_emb_dim = 300
-enc_hidden_dim = 512
-dec_hidden_dim = 512
-rnn_type = "lstm"
-enc2dec_hid = True
-attention = True
-enc_layers = 1
-dec_layers = 2
-m_dropout = 0
-enc_bidirect = True
-enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
-
-enc = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
-                hidden_dim= enc_hidden_dim,
-                rnn_type = rnn_type, layers= enc_layers,
-                dropout= m_dropout, device = device,
-                bidirectional= enc_bidirect)
-dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
-                hidden_dim= dec_hidden_dim,
-                rnn_type = rnn_type, layers= dec_layers,
-                dropout= m_dropout,
-                use_attention = attention,
-                enc_outstate_dim= enc_outstate_dim,
-                device = device,)
-
-corr_model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid,
-                device=device)
+voc_dim = src_glyph.size()
+embed_dim = 512
+corr_model = CorrectionBasicNet(voc_dim= voc_dim, embed_dim= embed_dim, device= device)
 corr_model = corr_model.to(device)
 
-
-## ----------- Load Embedding ------------------
-# pred_weight = torch.load("hypotheses/training_mai_103/weights/Training_mai_103_model.pth",
-#                             map_location=torch.device(device))
-# corr_model.decoder.embedding.weight.data.copy_(pred_weight["decoder.embedding.weight"])
-# corr_model.encoder.embedding.weight.data.copy_(pred_weight["decoder.embedding.weight"])
-
+# --- Load Embedding ---
 hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
-corr_model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
-corr_model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
-
+corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 # corr_model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
 
-##------ Model Details ---------------------------------------------------------
+##--------- Model Details ------------------------------------------------------
 rutl.count_train_param(corr_model)
 print(corr_model)
 
 
-##====== Optimizer Zone ===================================================================
-
+##======== Optimizer Zone ======================================================
 
 criterion = torch.nn.CrossEntropyLoss()
 
