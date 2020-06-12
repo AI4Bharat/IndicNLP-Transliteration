@@ -482,16 +482,16 @@ class Seq2Seq(nn.Module):
 
         return pred_tnsr_list
 
+##----------------- Simple Correction Networks ---------------------------------
 
-
-class CorrectionNet(nn.Module):
+class CorrectionSeqNet(nn.Module):
     """ Network for correcting the prediction of char based seq2seq
     """
     def __init__(self, voc_dim, embed_dim, hidden_dim ,
                        rnn_type = 'gru', layers = 1,
                        bidirectional = True,
                        dropout = 0, device = "cpu"):
-        super(CorrectionNet, self).__init__()
+        super(CorrectionSeqNet, self).__init__()
 
         self.voc_dim = voc_dim #src_vocab_sz
         self.embed_dim = embed_dim
@@ -554,7 +554,7 @@ class CorrectionNet(nn.Module):
         #output :shp: batch_size, voc_dim, mx_seq_length
         output = output.permute(0,2,1)
 
-        #predict_vecs: batch_size, max_length, embed_dim
+        #predict_vecs: batch_size, voc_dim, max_length
         predict_vecs = torch.zeros(batch_size, self.voc_dim, tgt.size(1) ).to(self.device)
         # sometimes the output size crosses max_seq_size of target
         curr_sz = min( output.shape[2], tgt.size(1) )
@@ -595,3 +595,67 @@ class CorrectionNet(nn.Module):
         return pred_arr.squeeze()
 
 
+class CorrectionBasicNet(nn.Module):
+    """ Network for correcting the prediction of char basic
+    This similar to time series denselayer
+    This NOT a Sequential network
+    """
+    def __init__(self, voc_dim, embed_dim,
+                       dropout = 0, device = "cpu"):
+        super(CorrectionBasicNet, self).__init__()
+        self.device = device
+        self.voc_dim = voc_dim
+        self.embed_dim = embed_dim
+
+        self.embedding = nn.Embedding(self.voc_dim, self.embed_dim)
+
+        self.ffnn = nn.Sequential(
+            nn.Linear(self.embed_dim, self.embed_dim),nn.LeakyReLU(),
+            nn.Linear(self.embed_dim, self.voc_dim),nn.LeakyReLU(),
+            nn.Linear(self.voc_dim, self.voc_dim),
+            )
+
+    def forward(self, src, tgt, src_sz):
+        '''
+        src: (batch_size, sequence_len.padded)
+        tgt: (batch_size, sequence_len.padded)
+        src_sz: [batch_size, 1] -  Unpadded sequence lengths -> unused
+        '''
+
+        batch_size = src.shape[0]
+        # x: batch_size, max_length, embed_dim
+        x = self.embedding(src)
+
+        #output :shp: batch_size, mx_seq_length, voc_dim
+        output = self.ffnn(x)
+
+        #output :shp: batch_size, voc_dim, mx_seq_length
+        output = output.permute(0,2,1)
+
+        #predict_vecs: batch_size, voc_dim, max_length
+        predict_vecs = torch.zeros(batch_size, self.voc_dim, tgt.size(1) ).to(self.device)
+        curr_sz = tgt.size(1)
+        predict_vecs[:,:,:curr_sz] = output[:,:,:curr_sz]
+
+        return predict_vecs
+
+
+    def inference(self, src):
+        '''
+        src: (sequence_length)
+        '''
+        src_sz = torch.tensor([len(src)])
+        src_ = src.unsqueeze(0).to(dtype=torch.long)
+
+        # x: 1, max_length, embed_dim
+        x = self.embedding(src_)
+
+        #output :shp: batch_size, mx_seq_length, voc_dim
+        output = self.ffnn(x)
+
+        #pred_vecs :shp: (mx_seq_length, voc_dim)
+        pred_vecs = output.squeeze()
+        #pred_vecs :shp: (sequence_len, 1)
+        pred_arr = torch.argmax(pred_vecs, dim=1)
+
+        return pred_arr.squeeze()
