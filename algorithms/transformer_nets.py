@@ -133,7 +133,8 @@ class XFMR_Neophyte(nn.Module):
 
         # inp: (1, max_seq_len)
         inp = torch.zeros(1, self.max_seq_len, dtype= torch.long).to(self.device)
-        inp[0, 0:x.shape[0] ] = x
+        in_sz = min(x.shape[0], self.max_seq_len)
+        inp[0, 0:in_sz ] = x[0:in_sz]
 
         # src_emb: (1, max_seq_len, vector_dim)
         src_emb = self.in2embed(inp)
