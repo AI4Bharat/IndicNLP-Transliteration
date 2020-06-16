@@ -112,6 +112,44 @@ class GlyphStrawboss():
         word = word.replace("_", "").replace('*','') # remove tokens
         return word
 
+class VocableStrawboss():
+    def __init__(self, json_file ,lang = 'en'):
+        """
+        word vocab ID
+        """
+        self.lang = lang
+        with open(json_file, 'r', encoding = "utf-8") as f:
+            self.words = json.load(f)
+
+        self.word2idx = {}
+        self.idx2word = {}
+        self._create_index()
+
+    def _create_index(self):
+
+        self.word2idx['<PAD>'] = 0  #pad
+        self.word2idx['<SRT>'] = 1  #start
+        self.word2idx['<END>'] = 2  #end
+        self.word2idx['<MSK>'] = 3  #Mask
+        self.word2idx['<UNK>'] = 4  #Unknown Word
+
+        # letter to index mapping
+        for idx, word in enumerate(self.words):
+            self.word2idx[word] = idx + 5 # +5 token initially
+
+        # index to letter mapping
+        for word, idx in self.word2idx.items():
+            self.idx2word[idx] = word
+
+    def size(self):
+        return len(self.word2idx)
+
+    def get_idx(self, word):
+        return self.word2idx.get(word, 4)
+    def get_word(self, idx):
+        return self.idx2word.get(idx, '<UNK>')
+
+
 class VocabSanitizer():
     def __init__(self, data_file):
         '''
@@ -252,7 +290,7 @@ class XlitData(Dataset):
 
 
 
-class MonoLMData(Dataset):
+class MonoCharLMData(Dataset):
     """ Monolingual dataloader for Language Model
     CSV or txt (or) if JSON keys used
     depends on: Numpy, Pandas, random
@@ -329,6 +367,108 @@ class MonoLMData(Dataset):
             df = pandas.read_csv(csv_file)
         x = df.iloc[:,0]
         return list(x)
+
+class MonoVocabLMData(Dataset):
+    """
+    """
+    def __init__(self, glyph_obj, vocab_obj, json_file,
+                    input_type = "compose",
+                    padding = True,
+                    max_seq_size = 50,
+                 ):
+        """
+        input_type: {'compose', 'readfromfile'}
+                    compose: create masked inputs from truths
+                    readfromfile: read the corresponding inputs from file
+        """
+
+        self.glyph_obj = glyph_obj
+        self.glyph_sz = glyph_obj.size()
+        self.vocab_obj = vocab_obj
+        self.padding = padding
+        self.max_seq_size = max_seq_size
+        self.ambiguity_ratio = 0.3 # percentage of misspellings
+
+        if input_type == 'compose':
+            self.crrt_str = self._json2_x(json_file)
+            self.crrt_str += self._garbage_tokens()
+        elif input_type == 'readfromfile':
+            self.misp_str, self.crrt_str = self._json2_x_y(json_file)
+
+        self._get_function = self._compose_corrupt_input if input_type == "compose" \
+                                else self._plain_read_input
+
+    def __getitem__(self, index):
+        return self._get_function(index)
+
+    def __len__(self):
+        return len(self.crrt_str)
+
+    def _plain_read_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.misp_str[index])
+        x = x[:self.max_seq_size] # truncate to max len
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        x_word_idx = self.vocab_obj.get_idx(self.crrt_str[index])
+        return x, x_word_idx, x_sz
+
+    def _compose_corrupt_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.crrt_str[index])
+        x = x[:self.max_seq_size] # truncate to max len
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        x_mkd = self._rand_char_insert(x.copy(), x_sz)
+        x_word_idx = self.vocab_obj.get_idx(self.crrt_str[index])
+        return x_mkd, x_word_idx, x_sz
+
+    def _rand_char_insert(self, arr, arr_sz):
+        m_seq = random.sample(range(1, arr_sz), int(arr_sz * self.ambiguity_ratio) )
+        arr[m_seq] = random.sample(range(7,self.glyph_sz ), len(m_seq) )
+        return arr
+
+    def _pad_sequence(self, x, max_len):
+        """ Pad sequence to maximum length;
+        Pads zero if word < max
+        Clip word if word > max
+        """
+        padded = np.zeros((max_len), dtype=np.int64)
+        if len(x) > max_len: padded[:] = x[:max_len]
+        else: padded[:len(x)] = x
+        return padded
+
+    def _json2_x_y(self, json_file):
+        ''' Convert JSON lang pairs to Key-Value lists with indexwise one2one correspondance
+        '''
+        with open(json_file, 'r', encoding = "utf-8") as f:
+            data = json.load(f)
+
+        x = []; y = []
+        for k in data:
+            for v in data[k]:
+                x.append(k); y.append(v)
+
+        return x, y
+
+    def _json2_x(self, json_file):
+        ''' Read Mono data from JSON lang pairs
+        '''
+        with open(json_file, 'r', encoding = "utf-8") as f:
+            data = json.load(f)
+        x = set()
+        for k in data:
+            x.add(k)
+        return list(x)
+
+    def _garbage_tokens(self, count = 5):
+        gtk_lst = []
+        for i in range(count):
+            t = "".join(random.sample(self.glyph_obj.char2idx.keys(), random.randint(5,20) ))
+            gtk_lst.append(t)
+        return gtk_lst
+
+
 
 
 ## ----- Correction Dataset -----

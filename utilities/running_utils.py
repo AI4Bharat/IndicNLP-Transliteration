@@ -33,8 +33,8 @@ def count_train_param(model):
 
 def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
     '''Simple accuracy calculation for TRAINING phase
-    pred_tnsr: torch tensor :shp: (batch, seq_len)
-    tgt_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
+    pred_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
+    tgt_tnsr: torch tensor :shp: (batch, seq_len)
     '''
     pred_seq = torch.argmax(pred_tnsr, dim=1)
     batch_sz = pred_seq.shape[0]
@@ -45,6 +45,22 @@ def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
         if pred == tgt:
             crt_cnt += 1
     return torch.tensor(crt_cnt/batch_sz)
+
+
+def vocab_accuracy_score(pred_tnsr, tgt_tnsr, vocab_obj):
+    '''Simple accuracy calculation for TRAINING phase
+    pred_tnsr: torch tensor :shp: (batch, voc_size)
+    tgt_tnsr: torch tensor :shp: (batch)
+    '''
+    batch_sz = pred_tnsr.shape[0]
+    pred = torch.argmax(pred_tnsr, dim=1).cpu().numpy()
+    tgt = tgt_tnsr.cpu().numpy()
+    crt_cnt = 0
+    for i in range(batch_sz):
+        if pred[i] == tgt[i]:
+            crt_cnt += 1
+    return torch.tensor(crt_cnt/batch_sz)
+
 
 def attention_weight_plotter(out_word, in_word, attention_array, save_path = ""):
     '''
