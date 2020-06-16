@@ -46,7 +46,7 @@ class Encoder(nn.Module):
         x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, batch_size, enc_embed_dim
-        # hidden: n_layer, batch_size, hidden_dim*num_directions | if LSTM (h_n, c_n)
+        # hidden: n_layer**num_directions, batch_size, hidden_dim | if LSTM (h_n, c_n)
         output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
@@ -508,7 +508,7 @@ class CorrectionSeqNet(nn.Module):
                           hidden_size= self.hidden_dim,
                           num_layers= self.layers,
                           bidirectional= bidirectional)
-        elif self.enc_rnn_type == "lstm":
+        elif self.rnn_type == "lstm":
             self.corr_rnn = nn.LSTM(input_size= self.embed_dim,
                           hidden_size= self.hidden_dim,
                           num_layers= self.layers,
@@ -595,54 +595,81 @@ class CorrectionSeqNet(nn.Module):
         return pred_arr.squeeze()
 
 
-class CorrectionBasicNet(nn.Module):
-    """ Network for correcting the prediction of char basic
-    This similar to time series denselayer
-    This NOT a Sequential network
+class VocabCorrectorNet(nn.Module):
     """
-    def __init__(self, voc_dim, embed_dim,
+    Word predictor (classification) based on char-seq input
+    """
+    def __init__(self, input_dim, output_dim, char_embed_dim, hidden_dim,
+                       rnn_type = 'gru', layers = 1,
+                       bidirectional = True,
                        dropout = 0, device = "cpu"):
-        super(CorrectionBasicNet, self).__init__()
-        self.device = device
-        self.voc_dim = voc_dim
-        self.embed_dim = embed_dim
+        super(VocabCorrectorNet, self).__init__()
 
-        self.embedding = nn.Embedding(self.voc_dim, self.embed_dim)
+        self.input_dim = input_dim #char_vocab_sz
+        self.output_dim = output_dim #word_vocab_sz
+        self.char_embed_dim = char_embed_dim
+        self.hidden_dim = hidden_dim
+        self.rnn_type = rnn_type
+        self.layers = layers
+        self.directions = 2 if bidirectional else 1
+        self.device = device
+
+        self.embedding = nn.Embedding(self.input_dim, self.char_embed_dim)
+
+        if self.rnn_type == "gru":
+            self.corr_rnn = nn.GRU(input_size= self.char_embed_dim,
+                          hidden_size= self.hidden_dim,
+                          num_layers= self.layers,
+                          bidirectional= bidirectional)
+        elif self.rnn_type == "lstm":
+            self.corr_rnn = nn.LSTM(input_size= self.char_embed_dim,
+                          hidden_size= self.hidden_dim,
+                          num_layers= self.layers,
+                          bidirectional= bidirectional)
+        else:
+            raise Exception("unknown RNN type mentioned")
 
         self.ffnn = nn.Sequential(
-            nn.Linear(self.embed_dim, self.embed_dim),nn.LeakyReLU(),
-            nn.Linear(self.embed_dim, self.voc_dim),nn.LeakyReLU(),
-            nn.Linear(self.voc_dim, self.voc_dim),
+            nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.char_embed_dim, self.output_dim),
             )
 
-    def forward(self, src, tgt, src_sz):
-        '''
+    def forward(self, src, src_sz):
+        """
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
-        src_sz: [batch_size, 1] -  Unpadded sequence lengths -> unused
-        '''
-
+        src_sz: [batch_size, 1] -  Unpadded sequence lengths
+        """
         batch_size = src.shape[0]
         # x: batch_size, max_length, embed_dim
         x = self.embedding(src)
 
-        #output :shp: batch_size, mx_seq_length, voc_dim
-        output = self.ffnn(x)
+        ## pack the padded data
+        # x: batch_size, max_length, embed_dim -> for pack_pad
+        x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False,
+                                                        batch_first= True) # unpad
 
-        #output :shp: batch_size, voc_dim, mx_seq_length
-        output = output.permute(0,2,1)
+        # output_: batch_size, packed_size, embed_dim
+        # hidden:  n_layer*num_directions, batch_size, hidden_dim | if LSTM (h_n, c_n)
+        output_, hidden = self.corr_rnn(x)
 
-        #predict_vecs: batch_size, voc_dim, max_length
-        predict_vecs = torch.zeros(batch_size, self.voc_dim, tgt.size(1) ).to(self.device)
-        curr_sz = tgt.size(1)
-        predict_vecs[:,:,:curr_sz] = output[:,:,:curr_sz]
+        # hidden: n_layer*num_directions, batch_size, hidden_dim | if LSTM h_n
+        hidden = hidden if self.rnn_type != "lstm" \
+                        else hidden[0] #h_n
 
-        return predict_vecs
+        # hidden: 1, batch_size, hidden_dim * directions ->tking only last two layers
+        hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
+                        else hidden[:,-1,:]
 
+        #output :shp: batch_size, word_voc_dim
+        output = self.ffnn(hidden.squeeze(0))
+
+        return output
 
     def inference(self, src):
         '''
-        src: (sequence_length)
+        src: (sequence_length) TODO
         '''
         src_sz = torch.tensor([len(src)])
         src_ = src.unsqueeze(0).to(dtype=torch.long)
@@ -650,12 +677,23 @@ class CorrectionBasicNet(nn.Module):
         # x: 1, max_length, embed_dim
         x = self.embedding(src_)
 
-        #output :shp: batch_size, mx_seq_length, voc_dim
-        output = self.ffnn(x)
+        ## pack the padded data
+        # x: 1, max_length, embed_dim -> for pack_pad
+        x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False,
+                                                        batch_first= True) # unpad
 
-        #pred_vecs :shp: (mx_seq_length, voc_dim)
-        pred_vecs = output.squeeze()
-        #pred_vecs :shp: (sequence_len, 1)
-        pred_arr = torch.argmax(pred_vecs, dim=1)
+        # output_: 1, packed_size, embed_dim
+        # hidden: 1, n_layer*num_directions,  hidden_dim | if LSTM (h_n, c_n)
+        output_, hidden = self.corr_rnn(x)
+
+        # hidden: 1, n_layer*num_directions, hidden_dim | if LSTM h_n
+        hidden = hidden if self.rnn_type != "lstm" \
+                        else hidden[0] #h_n
+
+        # hidden: 1, hidden_dim * directions ->tking only last two layers
+        hidden = torch.cat((hidden[:,-2,:], hidden[:,-1,:]), dim = -1) if self.directions == 2 \
+                        else hidden[:,-1,:].squeeze(1)
+        #output :shp: 1, word_voc_dim
+        output = self.ffnn(hidden)
 
         return pred_arr.squeeze()
