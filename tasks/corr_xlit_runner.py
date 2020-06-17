@@ -79,6 +79,7 @@ corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
                     bidirectional = bidirectional,
                     dropout = 0,
                     device = device)
+corr_model = corr_model.to(device)
 
 hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
 corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
@@ -98,7 +99,6 @@ criterion = torch.nn.CrossEntropyLoss()
 def loss_estimator(pred, truth):
     """
     """
-    print(pred.shape, truth.shape)
     loss_ = criterion(pred, truth)
 
     return torch.mean(loss_)
@@ -172,7 +172,8 @@ if __name__ =="__main__":
         # if val_loss < best_loss:
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
-            torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet.pth")
+            best_accuracy = val_accuracy
+            torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet-{}.pth".format(epoch+1))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
 

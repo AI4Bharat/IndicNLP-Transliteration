@@ -196,7 +196,7 @@ if __name__ =="__main__":
             print("***saving best optimal state [Loss:{} Accur:{}] ***".format(val_loss.data,val_accuracy.data) )
             best_loss = val_loss
             best_accuracy = val_accuracy
-            torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch))
+            torch.save(model.state_dict(), WGT_PREFIX+"_model-{}.pth".format(epoch+1))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
 
