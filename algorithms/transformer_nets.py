@@ -179,3 +179,101 @@ class PositionalEncoding(nn.Module):
         # x :shp: (seq_len, batch_size, vector_dim)
         x = x + self.pe
         return self.dropout(x)
+
+
+## ========================== Correctionnet ====================================
+
+
+class XFMR_CorrectorNet(nn.Module):
+    def __init__(self, input_vcb_sz, output_vcb_sz,
+                    char_embed_dim, n_layers,
+                    attention_head = 8, feedfwd_dim = 1024,
+                    max_seq_len = 50,
+                    dropout = 0, device = "cpu"):
+
+        super(XFMR_CorrectorNet, self).__init__()
+        self.device = device
+
+        self.input_vcb_sz = input_vcb_sz
+        self.output_vcb_sz = output_vcb_sz
+        self.vector_dim = char_embed_dim  # same size will be used for all layers in transformer
+        self.atten_head = attention_head
+        self.n_layers = n_layers
+        self.feedfwd_dim = feedfwd_dim
+        self.max_seq_len = max_seq_len
+        self.dropout = dropout
+
+
+        self.embedding = nn.Embedding(self.input_vcb_sz, self.vector_dim)
+        # pos_encoder non-learnable layer
+        self.pos_encoder = PositionalEncoding(self.vector_dim, self.dropout,
+                                                max_seq_len = max_seq_len,
+                                                device = self.device)
+
+        _enc_layer = nn.TransformerEncoderLayer(d_model= self.vector_dim,
+                                                nhead= self.atten_head,
+                                                dim_feedforward= self.feedfwd_dim,
+                                                dropout= self.dropout
+                                                )
+        self.xfmr_enc = nn.TransformerEncoder(_enc_layer, num_layers= n_layers)
+
+        self.out_fc = nn.Sequential( nn.LeakyReLU(),
+            nn.Linear(self.vector_dim, self.vector_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.vector_dim, self.output_vcb_sz),
+            )
+
+    def forward(self, src, src_sz):
+        '''
+        src: (batch, max_seq_len-padded)
+        tgt: (batch, max_seq_len-padded)
+        '''
+
+        # src_emb: (batch, in_seq_len, vector_dim)
+        src_emb = self.embedding(src)
+        # src_emb: (max_seq_len, batch, vector_dim) -> for transformer
+        src_emb = src_emb.permute(1,0,2)
+
+        # src_emb: (max_seq_len, batch, vector_dim)
+        src_emb =  src_emb * math.sqrt(self.vector_dim)
+        src_emb = self.pos_encoder(src_emb)
+        # out: (max_seq_len, batch, vector_dim)
+        out = self.xfmr_enc(src_emb)
+
+        # out: (batch, max_seq_len, vector_dim)
+        out = out.permute(1,0,2).contiguous()
+
+        # out: (batch, 1, out_vcb_dim)
+        out = self.out_fc(out[:,0,:] )
+        # out: (batch, out_vcb_dim)
+        out = out.squeeze(1)
+
+        return out
+
+    def inference(self, x):
+
+        # inp: (1, max_seq_len)
+        inp = torch.zeros(1, self.max_seq_len, dtype= torch.long).to(self.device)
+        in_sz = min(x.shape[0], self.max_seq_len)
+        inp[0, 0:in_sz ] = x[0:in_sz]
+
+        # src_emb: (1, max_seq_len, vector_dim)
+        src_emb = self.in2embed(inp)
+        # src_emb: (max_seq_len,1,vector_dim) -> for transformer
+        src_emb = src_emb.permute(1,0,2)
+
+        # src_emb: (max_seq_len, 1, vector_dim)
+        src_emb =  src_emb * math.sqrt(self.vector_dim)
+        src_emb = self.pos_encoder(src_emb)
+        # out: (max_seq_len, 1, vector_dim)
+        out = self.xfmr_enc(src_emb)
+
+        # out: (1, max_seq_len, vector_dim)
+        out = out.permute(1,0,2).contiguous()
+
+        # out: (1, max_seq_len, out_vcb_dim)
+        out = self.out_fc(out)
+        # prediction: ( max_seq_len )
+        prediction = torch.argmax(out, dim=2).squeeze()
+
+        return prediction
