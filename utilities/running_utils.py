@@ -24,42 +24,10 @@ def load_pretrained(model, weight_path):
 
     return model
 
-
 def count_train_param(model):
     train_params_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('The model has {} trainable parameters'.format(train_params_count))
     return train_params_count
-
-
-def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
-    '''Simple accuracy calculation for TRAINING phase
-    pred_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
-    tgt_tnsr: torch tensor :shp: (batch, seq_len)
-    '''
-    pred_seq = torch.argmax(pred_tnsr, dim=1)
-    batch_sz = pred_seq.shape[0]
-    crt_cnt = 0
-    for i in range(batch_sz):
-        pred = glyph_obj.xlitvec2word(pred_seq[i,:].cpu().numpy())
-        tgt = glyph_obj.xlitvec2word(tgt_tnsr[i,:].cpu().numpy())
-        if pred == tgt:
-            crt_cnt += 1
-    return torch.tensor(crt_cnt/batch_sz)
-
-
-def vocab_accuracy_score(pred_tnsr, tgt_tnsr, vocab_obj):
-    '''Simple accuracy calculation for TRAINING phase
-    pred_tnsr: torch tensor :shp: (batch, voc_size)
-    tgt_tnsr: torch tensor :shp: (batch)
-    '''
-    batch_sz = pred_tnsr.shape[0]
-    pred = torch.argmax(pred_tnsr, dim=1).cpu().numpy()
-    tgt = tgt_tnsr.cpu().numpy()
-    crt_cnt = 0
-    for i in range(batch_sz):
-        if pred[i] == tgt[i]:
-            crt_cnt += 1
-    return torch.tensor(crt_cnt/batch_sz)
 
 
 def attention_weight_plotter(out_word, in_word, attention_array, save_path = ""):
@@ -83,6 +51,39 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
 
     plt.clf()
 
+
+## ===================== Metrics =============================
+
+
+def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
+    '''Simple accuracy calculation for TRAINING phase
+    pred_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
+    tgt_tnsr: torch tensor :shp: (batch, seq_len)
+    '''
+    pred_seq = torch.argmax(pred_tnsr, dim=1)
+    batch_sz = pred_seq.shape[0]
+    crt_cnt = 0
+    for i in range(batch_sz):
+        pred = glyph_obj.xlitvec2word(pred_seq[i,:].cpu().numpy())
+        tgt = glyph_obj.xlitvec2word(tgt_tnsr[i,:].cpu().numpy())
+        if pred == tgt:
+            crt_cnt += 1
+    return torch.tensor(crt_cnt/batch_sz)
+
+
+def accuracy_score_byWord(pred_tnsr, tgt_tnsr, vocab_obj):
+    '''Simple accuracy calculation for TRAINING phase
+    pred_tnsr: torch tensor :shp: (batch, voc_size)
+    tgt_tnsr: torch tensor :shp: (batch)
+    '''
+    batch_sz = pred_tnsr.shape[0]
+    pred = torch.argmax(pred_tnsr, dim=1).cpu().numpy()
+    tgt = tgt_tnsr.cpu().numpy()
+    crt_cnt = 0
+    for i in range(batch_sz):
+        if pred[i] == tgt[i]:
+            crt_cnt += 1
+    return torch.tensor(crt_cnt/batch_sz)
 
 
 
