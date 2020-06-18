@@ -11,6 +11,7 @@ import utilities.running_utils as rutl
 import utilities.lang_data_utils as lutl
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import VocabCorrectorNet
+from algorithms.transformer_nets import XFMR_CorrectorNet
 
 ##===== Init Setup =============================================================
 INST_NAME = "Training_Test"
@@ -64,21 +65,38 @@ test_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/
 
 ##======== Model Configuration =================================================
 
+# input_dim = glyph_obj.size()
+# output_dim = vocab_obj.size()
+# char_embed_dim = 512
+# hidden_dim = 512
+# rnn_type = 'lstm'
+# layers = 3
+# bidirectional = True
+# dropout = 0
+
+# corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
+#                     char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
+#                     rnn_type = rnn_type, layers = layers,
+#                     bidirectional = bidirectional,
+#                     dropout = 0,
+#                     device = device)
+
 input_dim = glyph_obj.size()
 output_dim = vocab_obj.size()
 char_embed_dim = 512
-hidden_dim = 512
-rnn_type = 'lstm'
-layers = 3
-bidirectional = True
-dropout = 0
+n_layers = 6
+attention_head = 8
+feedfwd_dim = 512
+max_seq_len = 60
+m_dropout = 0
 
-corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
-                    char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
-                    rnn_type = rnn_type, layers = layers,
-                    bidirectional = bidirectional,
-                    dropout = 0,
+corr_model = XFMR_CorrectorNet(input_vcb_sz = input_dim, output_vcb_sz = output_dim,
+                    char_embed_dim = char_embed_dim, n_layers = n_layers,
+                    attention_head = attention_head, feedfwd_dim = feedfwd_dim,
+                    max_seq_len = max_seq_len,
+                    dropout = m_dropout,
                     device = device)
+
 corr_model = corr_model.to(device)
 
 hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
