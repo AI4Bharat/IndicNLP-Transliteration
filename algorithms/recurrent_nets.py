@@ -690,10 +690,12 @@ class VocabCorrectorNet(nn.Module):
         hidden = hidden if self.rnn_type != "lstm" \
                         else hidden[0] #h_n
 
-        # hidden: 1, hidden_dim * directions ->tking only last two layers
-        hidden = torch.cat((hidden[:,-2,:], hidden[:,-1,:]), dim = -1) if self.directions == 2 \
-                        else hidden[:,-1,:].squeeze(1)
+        # hidden: 1, batch_size, hidden_dim * directions ->tking only last two layers
+        hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
+                        else hidden[:,-1,:]
+
         #output :shp: 1, word_voc_dim
         output = self.ffnn(hidden)
+        output = torch.argmax(output, dim=1)
 
-        return pred_arr.squeeze()
+        return output

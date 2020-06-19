@@ -1,9 +1,10 @@
 import os
-from utilities.lang_data_utils import GlyphStrawboss, VocabSanitizer
+from utilities.lang_data_utils import GlyphStrawboss, VocabSanitizer, VocableStrawboss
 import utilities.running_utils as rutl
 
 hi_glyph = GlyphStrawboss("hi")
 en_glyph = GlyphStrawboss("en")
+hi_vocab = VocableStrawboss("data/maithili/mai_all_words_sorted.json")
 device = "cpu"
 
 ##=============== Models =======================================================
@@ -33,14 +34,16 @@ def inferencer(word, topk = 3):
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
         out = model.inference(in_vec)
         out = corr_model.inference(out)
-        result =[ hi_glyph.xlitvec2word(out.cpu().numpy()) ]
+        # result =[ hi_glyph.xlitvec2word(out.cpu().numpy()) ]
+        result = [ hi_vocab.get_word(out.cpu().numpy()) ]
         return result
     else:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
         ## change to active or passive beam
         out_list = model.active_beam_inference(in_vec, beam_width = topk)
         out_list = [ corr_model.inference(out) for out in out_list]
-        result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in out_list]
+        # result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in out_list]
+        result = [hi_vocab.get_word(out.cpu().numpy()) for out in out_list]
         # result = voc_sanitize.reposition(result)
         return result
 

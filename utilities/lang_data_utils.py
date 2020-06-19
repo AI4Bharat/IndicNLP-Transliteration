@@ -147,7 +147,7 @@ class VocableStrawboss():
     def get_idx(self, word):
         return self.word2idx.get(word, 4)
     def get_word(self, idx):
-        return self.idx2word.get(idx, '<UNK>')
+        return self.idx2word.get(int(idx), '<UNK>')
 
 
 class VocabSanitizer():
