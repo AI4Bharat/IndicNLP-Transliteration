@@ -393,7 +393,7 @@ class MonoVocabLMData(Dataset):
             self.crrt_str = self._json2_x(json_file)
             self.crrt_str += self._garbage_tokens()
         elif input_type == 'readfromfile':
-            self.misp_str, self.crrt_str = self._json2_k_v(json_file)
+            self.crrt_str, self.misp_str = self._json2_k_v(json_file)
 
         self._get_function = self._compose_corrupt_input if input_type == "compose" \
                                 else self._plain_read_input
