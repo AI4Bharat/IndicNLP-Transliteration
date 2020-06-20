@@ -209,9 +209,9 @@ class XlitData(Dataset):
         """
         #Load data
         if file_map == "LangEn": # output-input
-            tgt_str, src_str = self._json2_x_y(json_file)
+            tgt_str, src_str = self._json2_k_v(json_file)
         elif file_map == "EnLang": # input-output
-            src_str, tgt_str = self._json2_x_y(json_file)
+            src_str, tgt_str = self._json2_k_v(json_file)
         else:
             raise Exception('Unknown JSON structure')
 
@@ -248,7 +248,7 @@ class XlitData(Dataset):
         return len(self.src)
 
 
-    def _json2_x_y(self, json_file):
+    def _json2_k_v(self, json_file):
         ''' Convert JSON lang pairs to Key-Value lists with indexwise one2one correspondance
         '''
         with open(json_file, 'r', encoding = "utf-8") as f:
@@ -393,7 +393,7 @@ class MonoVocabLMData(Dataset):
             self.crrt_str = self._json2_x(json_file)
             self.crrt_str += self._garbage_tokens()
         elif input_type == 'readfromfile':
-            self.misp_str, self.crrt_str = self._json2_x_y(json_file)
+            self.misp_str, self.crrt_str = self._json2_k_v(json_file)
 
         self._get_function = self._compose_corrupt_input if input_type == "compose" \
                                 else self._plain_read_input
@@ -438,7 +438,7 @@ class MonoVocabLMData(Dataset):
         else: padded[:len(x)] = x
         return padded
 
-    def _json2_x_y(self, json_file):
+    def _json2_k_v(self, json_file):
         ''' Convert JSON lang pairs to Key-Value lists with indexwise one2one correspondance
         '''
         with open(json_file, 'r', encoding = "utf-8") as f:
@@ -461,7 +461,7 @@ class MonoVocabLMData(Dataset):
             x.add(k)
         return list(x)
 
-    def _garbage_tokens(self, count = 5):
+    def _garbage_tokens(self, count = 1):
         gtk_lst = []
         for i in range(count):
             t = "".join(random.sample(self.glyph_obj.char2idx.keys(), random.randint(5,20) ))
@@ -477,7 +477,7 @@ def compose_corr_dataset(pred_file, truth_file,
                          save_path = "", topk = 1  ):
     """
     Function to create Json for Correction Network from the truth and predition of models
-    Return: Path of the composed file { Output: [Input] }
+    Return: Path of the composed file { Correct: [Pred] }
     pred_file: EnLang
     truth_file: LangEn
     topk: Number of topk predictions to be used or composing data
