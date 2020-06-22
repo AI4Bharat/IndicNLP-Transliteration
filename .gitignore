@@ -1,7 +1,7 @@
 .vscode
 data/*
 hypotheses/*
-apps/bins/*
+apps/models/*
 logs
 *.log
 temp*
