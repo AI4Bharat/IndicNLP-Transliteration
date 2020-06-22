@@ -29,8 +29,19 @@ corr_model.eval()
 
 ##==============================================================================
 
+def pred_contrive(corr_lst, pred_lst):
+    out =[]
+    for l in corr_lst:
+        if (l not in out) and (l != "<UNK>"):
+            out.append(l)
+    for l in pred_lst:
+        if l not in out:
+            out.append(l)
+    return out[:len(corr_lst)]
+
+
 def inferencer(word, topk = 3):
-    if topk == 1:
+    if topk == 0:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
         out = model.inference(in_vec)
         out = corr_model.inference(out)
@@ -41,11 +52,14 @@ def inferencer(word, topk = 3):
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
         ## change to active or passive beam
         out_list = model.active_beam_inference(in_vec, beam_width = topk)
+        p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in out_list]
+
         out_list = [ corr_model.inference(out) for out in out_list]
-        # result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in out_list]
-        result = [hi_vocab.get_word(out.cpu().numpy()) for out in out_list]
+        c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in out_list]
         # result = voc_sanitize.reposition(result)
+        result = pred_contrive(c_result, p_result)
         return result
+
 
 
 def infer_analytics(word):
