@@ -22,9 +22,9 @@ app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
 ## Set in order to host in specific domain
-# SSL_FILES = None
-SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
-            '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
+SSL_FILES = None
+# SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
+#             '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
 
 @app.route('/languages', methods = ['GET', 'POST'])
@@ -97,14 +97,14 @@ class XlitEngine():
         self.langs = {"hi": "Hindi", "gom": "Konkani (Goan)"}
 
         try:
-            from bins.hindi.program85 import inference_engine as hindi_engine
+            from models.hindi.program85 import inference_engine as hindi_engine
             self.hindi_engine = hindi_engine
         except:
             print("Failure in loading Hindi")
             del self.langs['hi']
 
         try:
-            from bins.konkani.gom_program104 import inference_engine as konkani_engine
+            from models.konkani.gom_program104 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
         except:
             print("Failure in loading Konkani")
