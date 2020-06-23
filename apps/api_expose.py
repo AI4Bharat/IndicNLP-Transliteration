@@ -4,6 +4,7 @@ Expose Transliteration Engine as an HTTP API.
 USAGE:
     1. $ sudo env PATH=$PATH python3 api_expose.py
     2. Run in browser: http://localhost:8000/tl/gom/a
+    3. In terminal: curl https://localhost:8000/tl/gom/aa
 """
 from flask import Flask, jsonify, request
 from datetime import datetime
@@ -37,7 +38,7 @@ def supported_languages():
             "Identifier": code,
             "DisplayName": name,
             "Author": "AI4Bharat",
-            "CompiledDate": "IDK when",
+            "CompiledDate": "23-June-2020",
             "IsStable": True
         })
     # TODO: Save this variable permanently, as it will be constant
@@ -94,22 +95,28 @@ sys.path.append(BASEPATH)
 
 class XlitEngine():
     def __init__(self):
-        self.langs = {"hi": "Hindi", "gom": "Konkani (Goan)"}
+        self.langs = {"hi": "Hindi", "gom": "Konkani (Goan)", "mai": "Maithili"}
 
         try:
             from models.hindi.program85 import inference_engine as hindi_engine
             self.hindi_engine = hindi_engine
-        except:
-            print("Failure in loading Hindi")
+        except Exception as error:
+            print("Failure in loading Hindi \n", error)
             del self.langs['hi']
 
         try:
             from models.konkani.gom_program104 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
-        except:
-            print("Failure in loading Konkani")
+        except Exception as error:
+            print("Failure in loading Konkani \n", error)
             del self.langs['gom']
 
+        try:
+            from models.maithili.mai_program116c3 import inference_engine as maithili_engine
+            self.maithili_engine = maithili_engine
+        except Exception as error:
+            print("Failure in loading Maithili \n", error)
+            del self.langs['mai']
 
     def transliterate(self, lang_code, eng_word):
         eng_word = self._clean(eng_word)
@@ -125,6 +132,8 @@ class XlitEngine():
                 return self.hindi_engine(eng_word)
             elif lang_code == "gom":
                 return self.konkani_engine(eng_word)
+            elif lang_code == "mai":
+                return self.maithili_engine(eng_word)
 
         except:
             return XlitError.unknown_err
