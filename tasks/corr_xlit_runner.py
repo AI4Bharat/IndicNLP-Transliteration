@@ -26,7 +26,7 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 ##===== Running Configuration =================================================
 
 glyph_obj = lutl.GlyphStrawboss("hi")
-vocab_obj = lutl.VocableStrawboss("data/maithili/mai_all_words.json")
+vocab_obj = lutl.VocableStrawboss("data/maithili/mai_all_words_sorted.json")
 
 num_epochs = 1000
 batch_size = 2
@@ -35,7 +35,7 @@ learning_rate = 1e-3
 pretrain_wgt_path = None
 
 train_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
-                    json_file = "data/maithili/mai_all_words.json",
+                    json_file = "data/maithili/mai_all_words_sorted.json",
                     input_type = "compose",
                     padding = True,
                     max_seq_size = 50,)
@@ -48,7 +48,7 @@ val_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/a
                                     save_path= LOG_PATH)
 
 val_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
-                    json_file = val_file,
+                    json_file = val_file, ## <<<<<<<<<<<<<<<<
                     input_type = "readfromfile",
                     padding = True,
                     max_seq_size = 50,)
@@ -65,36 +65,20 @@ test_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/
 
 ##======== Model Configuration =================================================
 
-# input_dim = glyph_obj.size()
-# output_dim = vocab_obj.size()
-# char_embed_dim = 512
-# hidden_dim = 512
-# rnn_type = 'lstm'
-# layers = 3
-# bidirectional = True
-# dropout = 0
-
-# corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
-#                     char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
-#                     rnn_type = rnn_type, layers = layers,
-#                     bidirectional = bidirectional,
-#                     dropout = 0,
-#                     device = device)
-
 input_dim = glyph_obj.size()
 output_dim = vocab_obj.size()
 char_embed_dim = 512
-n_layers = 6
-attention_head = 8
-feedfwd_dim = 512
-max_seq_len = 60
-m_dropout = 0
+hidden_dim = 1024
+rnn_type = 'lstm'
+layers = 1
+bidirectional = True
+dropout = 0
 
-corr_model = XFMR_CorrectorNet(input_vcb_sz = input_dim, output_vcb_sz = output_dim,
-                    char_embed_dim = char_embed_dim, n_layers = n_layers,
-                    attention_head = attention_head, feedfwd_dim = feedfwd_dim,
-                    max_seq_len = max_seq_len,
-                    dropout = m_dropout,
+corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
+                    char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
+                    rnn_type = rnn_type, layers = layers,
+                    bidirectional = bidirectional,
+                    dropout = 0,
                     device = device)
 
 corr_model = corr_model.to(device)
