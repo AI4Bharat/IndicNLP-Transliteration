@@ -56,7 +56,7 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
 
 
 def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
-    '''Simple accuracy calculation for TRAINING phase
+    '''Simple accuracy calculation for char2char seq TRAINING phase
     pred_tnsr: torch tensor :shp: (batch, voc_size, seq_len)
     tgt_tnsr: torch tensor :shp: (batch, seq_len)
     '''
@@ -71,8 +71,9 @@ def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
     return torch.tensor(crt_cnt/batch_sz)
 
 
-def accuracy_score_byWord(pred_tnsr, tgt_tnsr, vocab_obj):
-    '''Simple accuracy calculation for TRAINING phase
+def accuracy_score_multinominal(pred_tnsr, tgt_tnsr, vocab_obj):
+    '''Simple accuracy calculation for Correction LM training
+        Vocab treated as multiclass
     pred_tnsr: torch tensor :shp: (batch, voc_size)
     tgt_tnsr: torch tensor :shp: (batch)
     '''
