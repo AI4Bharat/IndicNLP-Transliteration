@@ -4,7 +4,6 @@ Expose Transliteration Engine as an HTTP API.
 USAGE:
     1. $ sudo env PATH=$PATH python3 api_expose.py
     2. Run in browser: http://localhost:8000/tl/gom/a
-    3. In terminal: curl https://localhost:8000/tl/gom/aa
 """
 from flask import Flask, jsonify, request
 from datetime import datetime
@@ -22,10 +21,11 @@ class XlitError(enum.Enum):
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
+DEBUG = True
 ## Set in order to host in specific domain
 SSL_FILES = None
 # SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
-#             '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
+#              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
 
 @app.route('/languages', methods = ['GET', 'POST'])
@@ -88,6 +88,13 @@ def reverse_xlit_api(lang_code, word):
     respose['error'] = 'Not yet implemented!'
     return jsonify(response)
 
+def host_https():
+    https_server = WSGIServer(('0.0.0.0', 443), app,
+                                     certfile=SSL_FILES[0], keyfile=SSL_FILES[1])
+    print('Starting HTTPS Server...')
+    https_server.serve_forever()
+    return
+
 ##------------------------------------------------------------------------------
 
 BASEPATH = os.path.dirname(os.path.realpath(__file__))
@@ -143,19 +150,22 @@ class XlitEngine():
         accepted = "abcdefghijklmnopqrstuvwxyz"
         word = ''.join([i for i in word if i in accepted])
         return word
-
+#-------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     engine = XlitEngine()
-    if SSL_FILES: # Production Server
+    if not DEBUG: # Production Server
         from flask_cors import CORS, cross_origin
         cors = CORS(app, resources={r"/*": {"origins": "*"}})
         # app.run(host='0.0.0.0', port=443, ssl_context=SSL_FILES)
 
         from gevent.pywsgi import WSGIServer
-        http_server = WSGIServer(('0.0.0.0', 443), app,
-                                 certfile=SSL_FILES[0], keyfile=SSL_FILES[1])
-        print('Starting HTTPS Server...')
+        if SSL_FILES:
+            from multiprocessing import Process
+            Process(target=host_https).start()
+
+        http_server = WSGIServer(('0.0.0.0', 80), app)
+        print('Starting HTTP Server...')
         http_server.serve_forever()
     else: # Development Server
         app.run(debug=True, host='0.0.0.0', port=8000)
