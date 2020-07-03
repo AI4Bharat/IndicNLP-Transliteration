@@ -26,7 +26,7 @@ def toggle_json(read_path, save_prefix=""):
     for t in tog_dict.keys():
         tog_dict[t] = list(tog_dict[t])
 
-    save_file = save_prefix+"Toggled-"+ os.path.basename(path)
+    save_file = save_prefix+"Toggled-"+ os.path.basename(read_path)
     with open(save_file,"w", encoding = "utf-8") as f:
         json.dump(tog_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
@@ -88,34 +88,34 @@ def vocab_sanity_runner(pred_json, voc_json):
 
 ROOT_PATH= ""
 files = [
-    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_news18_dev.json",
-    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_fire13_dev.json",
-    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_test.json",
-    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnHi_varnam_special_test.json",
 
-    # ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnGom_ann1_test.json"
+    # ROOT_PATH+"data/konkani/GomEn_ann1_train.json",
+    # ROOT_PATH+"data/konkani/GomEn_ann1_valid.json",
+    # ROOT_PATH+"data/konkani/GomEn_ann1_test.json",
 
-    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnMai_ann1_valid.json",
-    ROOT_PATH+"tools/accuracy_reporter/logs/EnLang-data/EnMai_ann1_test.json"
+    # ROOT_PATH+"data/maithili/MaiEn_ann1_train.json",
+    ROOT_PATH+"data/maithili/MaiEn_ann1_valid.json",
+    ROOT_PATH+"data/maithili/MaiEn_ann1_test.json",
 ]
 
-SAVE_DIR = "hypotheses/training_mai_101/acc_log" + "/active/"
+SAVE_DIR = "hypotheses/training_Test/acc_log"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
 
     for fi in files:
-        words = get_from_json(fi, "key")
-        out_dict = inference_looper(words, topk = 10)
+        tfi =  toggle_json(fi, save_prefix=SAVE_DIR)
+        words = get_from_json(tfi, "key")
+        out_dict = inference_looper(words, topk = 1)
         ## Testing with LM adjustments
         # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",
             # "data/konkani/gom_word_list.json")
 
-        sv_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
-        save_to_json(sv_path, out_dict)
+        pred_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
+        save_to_json(pred_path, out_dict)
 
-        gt_json = fi
-        pred_json = sv_path
+        gt_json = tfi
+        pred_json = pred_path
         save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
         for topk in [10, 5, 3, 2, 1]:
