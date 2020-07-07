@@ -26,7 +26,7 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 ##===== Running Configuration =================================================
 
 glyph_obj = lutl.GlyphStrawboss("hi")
-vocab_obj = lutl.VocableStrawboss("data/maithili/mai_all_words_sorted.json")
+vocab_obj = lutl.VocableStrawboss("data/konkani/gom_all_words_sorted.json")
 
 num_epochs = 1000
 batch_size = 2
@@ -35,7 +35,7 @@ learning_rate = 1e-3
 pretrain_wgt_path = None
 
 train_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
-                    json_file = "data/maithili/mai_all_words_sorted.json",
+                    json_file = "data/konkani/mai_all_words_sorted.json",
                     input_type = "compose",
                     padding = True,
                     max_seq_size = 50,)
@@ -43,8 +43,8 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 
-val_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_valid.json",
-                                    truth_file= "data/maithili/MaiEn_ann1_valid.json",
+val_file = lutl.compose_corr_dataset(  pred_file= "",
+                                    truth_file= "data/konkani/GomEn_ann1_valid.json",
                                     save_path= LOG_PATH)
 
 val_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
@@ -56,8 +56,8 @@ val_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-test_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/training_mai_103/acc_train_log/pred_EnMai_ann1_test.json",
-                                    truth_file= "data/maithili/MaiEn_ann1_test.json",
+test_file = lutl.compose_corr_dataset(  pred_file= "",
+                                    truth_file= "data/konkani/GomEn_ann1_test.json",
                                     save_path= LOG_PATH)
 
 # for i in range(len(train_dataset)):
