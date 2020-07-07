@@ -8,7 +8,7 @@ import os
 import sys
 from tqdm import tqdm
 import utilities.running_utils as rutl
-from utilities.lang_data_utils import XlitData, GlyphStrawboss, MonoLMData
+from utilities.lang_data_utils import XlitData, GlyphStrawboss
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
@@ -32,12 +32,12 @@ tgt_glyph = GlyphStrawboss("hi")
 num_epochs = 1000
 batch_size = 3
 acc_grad = 1
-learning_rate = 1e-5
-teacher_forcing, teach_force_till, teach_decay_pereph = 0.50, 5, 0.05
+learning_rate = 1e-3
+teacher_forcing, teach_force_till, teach_decay_pereph = 1, 10, 0
 pretrain_wgt_path = None
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/maithili/MaiEn_ann1_train.json', file_map = "LangEn",
+                        json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
                         padding=True)
 
 ## For monoLing
@@ -50,7 +50,7 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/maithili/MaiEn_ann1_valid.json', file_map = "LangEn",
+                        json_file='data/konkani/GomEn_ann1_valid.json', file_map = "LangEn",
                         padding=True)
 
 
@@ -64,8 +64,8 @@ val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 256
-dec_emb_dim = 256
+enc_emb_dim = 512
+dec_emb_dim = 512
 enc_hidden_dim = 512
 dec_hidden_dim = 512
 rnn_type = "lstm"
