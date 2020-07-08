@@ -2,6 +2,11 @@ import os
 from utilities.lang_data_utils import GlyphStrawboss, VocabSanitizer, VocableStrawboss
 import utilities.running_utils as rutl
 
+''' VacabSanitizer usage
+voc_sanitize = VocabSanitizer("data/X_word_list.json")
+result = voc_sanitize.reposition(result)
+'''
+
 hi_glyph = GlyphStrawboss("hi")
 en_glyph = GlyphStrawboss("en")
 hi_vocab = VocableStrawboss("data/maithili/mai_all_words_sorted.json")
@@ -56,7 +61,6 @@ def inferencer(word, topk = 3):
 
         out_list = [ corr_model.inference(out) for out in out_list]
         c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in out_list]
-        # result = voc_sanitize.reposition(result)
         result = pred_contrive(c_result, p_result)
         return result
 

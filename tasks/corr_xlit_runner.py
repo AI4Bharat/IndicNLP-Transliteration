@@ -20,8 +20,8 @@ INST_NAME = "Training_Test"
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 LOG_PATH = "hypotheses/"+INST_NAME+"/"
-WGT_PREFIX = LOG_PATH+"weights/"+ INST_NAME + "_corr"
-if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
+WGT_PREFIX = LOG_PATH+"/weights/"+ INST_NAME + "_corr"
+if not os.path.exists(LOG_PATH+"/weights"): os.makedirs(LOG_PATH+"/weights")
 
 ##===== Running Configuration =================================================
 
@@ -87,7 +87,7 @@ hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
 corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 
-# corr_model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
+# corr_model = rutl.load_pretrained(corr_model,pretrain_wgt_path) #if path empty returns unmodified
 
 ##--------- Model Details ------------------------------------------------------
 rutl.count_train_param(corr_model)
