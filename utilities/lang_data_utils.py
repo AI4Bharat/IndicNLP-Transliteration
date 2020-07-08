@@ -391,7 +391,7 @@ class MonoVocabLMData(Dataset):
 
         if input_type == 'compose':
             self.crrt_str = self._json2_x(json_file)
-            self.crrt_str += self._garbage_tokens()
+            self.crrt_str += self._garbage_tokens(count = 5)
         elif input_type == 'readfromfile':
             self.crrt_str, self.misp_str = self._json2_k_v(json_file)
 
