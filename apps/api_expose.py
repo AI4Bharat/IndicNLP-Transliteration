@@ -112,7 +112,7 @@ class XlitEngine():
             del self.langs['hi']
 
         try:
-            from models.konkani.gom_program104 import inference_engine as konkani_engine
+            from models.konkani.gom_program111c1 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
         except Exception as error:
             print("Failure in loading Konkani \n", error)

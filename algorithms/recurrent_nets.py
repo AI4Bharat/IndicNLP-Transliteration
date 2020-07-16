@@ -663,7 +663,7 @@ class VocabCorrectorNet(nn.Module):
                         else hidden[:,-1,:]
 
         #output :shp: batch_size, word_voc_dim
-        output = self.ffnn(hidden.squeeze(0))
+        output = self.ffnn(hidden.reshape(batch_size, -1))
 
         return output
 
