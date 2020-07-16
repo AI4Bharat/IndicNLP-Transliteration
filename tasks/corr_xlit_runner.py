@@ -29,13 +29,13 @@ glyph_obj = lutl.GlyphStrawboss("hi")
 vocab_obj = lutl.VocableStrawboss("data/konkani/gom_all_words_sorted.json")
 
 num_epochs = 1000
-batch_size = 2
+batch_size = 1
 acc_grad = 1
 learning_rate = 1e-3
 pretrain_wgt_path = None
 
 train_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
-                    json_file = "data/konkani/mai_all_words_sorted.json",
+                    json_file = "data/konkani/gom_all_words_sorted.json",
                     input_type = "compose",
                     padding = True,
                     max_seq_size = 50,)
@@ -43,7 +43,7 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 
-val_file = lutl.compose_corr_dataset(  pred_file= "",
+val_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/Training_gom_111/acc_log_train/pred_GomEn_ann1_valid.json",
                                     truth_file= "data/konkani/GomEn_ann1_valid.json",
                                     save_path= LOG_PATH)
 
@@ -56,7 +56,7 @@ val_dataset = lutl.MonoVocabLMData( glyph_obj, vocab_obj,
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-test_file = lutl.compose_corr_dataset(  pred_file= "",
+test_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/Training_gom_111/acc_log_train/pred_GomEn_ann1_test.json",
                                     truth_file= "data/konkani/GomEn_ann1_test.json",
                                     save_path= LOG_PATH)
 
@@ -69,6 +69,7 @@ input_dim = glyph_obj.size()
 output_dim = vocab_obj.size()
 char_embed_dim = 512
 hidden_dim = 1024
+mode = "multinominal"
 rnn_type = 'lstm'
 layers = 1
 bidirectional = True
@@ -76,6 +77,7 @@ dropout = 0
 
 corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
                     char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
+                    mode = mode,
                     rnn_type = rnn_type, layers = layers,
                     bidirectional = bidirectional,
                     dropout = 0,
@@ -83,7 +85,7 @@ corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
 
 corr_model = corr_model.to(device)
 
-hi_emb_vecs = np.load("data/embeds/hi_char_512_ftxt.npy")
+hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_512_fasttext.npy")
 corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 

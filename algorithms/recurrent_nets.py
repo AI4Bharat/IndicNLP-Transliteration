@@ -600,15 +600,21 @@ class VocabCorrectorNet(nn.Module):
     Word predictor (classification) based on char-seq input
     """
     def __init__(self, input_dim, output_dim, char_embed_dim, hidden_dim,
+                       mode = "multinominal",
                        rnn_type = 'gru', layers = 1,
                        bidirectional = True,
                        dropout = 0, device = "cpu"):
+
+        """
+        modes: {'multinominal', 'embedding'}
+        """
         super(VocabCorrectorNet, self).__init__()
 
         self.input_dim = input_dim #char_vocab_sz
         self.output_dim = output_dim #word_vocab_sz
         self.char_embed_dim = char_embed_dim
         self.hidden_dim = hidden_dim
+        self.mode = mode
         self.rnn_type = rnn_type
         self.layers = layers
         self.directions = 2 if bidirectional else 1
@@ -629,11 +635,21 @@ class VocabCorrectorNet(nn.Module):
         else:
             raise Exception("unknown RNN type mentioned")
 
-        self.ffnn = nn.Sequential(
-            nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
-            nn.LeakyReLU(),
-            nn.Linear(self.char_embed_dim, self.output_dim),
-            )
+        if self.mode == "multinominal":
+            self.ffnn_multinominal = nn.Sequential(
+                nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
+                nn.LeakyReLU(),
+                nn.Linear(self.char_embed_dim, self.output_dim),
+                )
+        elif self.mode == "embedding":
+            self.ffnn_embedding = nn.Sequential(
+                nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
+                nn.LeakyReLU(),
+                nn.Linear(self.char_embed_dim, 300), #set to fasttext size
+                )
+        else:
+            raise Exception("Unknown Mode mentioned")
+
 
     def forward(self, src, src_sz):
         """
@@ -662,8 +678,13 @@ class VocabCorrectorNet(nn.Module):
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
                         else hidden[:,-1,:]
 
-        #output :shp: batch_size, word_voc_dim
-        output = self.ffnn(hidden.reshape(batch_size, -1))
+
+        if self.mode == "embedding":
+            #output :shp: (1, 300)
+            output = self.ffnn_embedding(hidden.reshape(batch_size, -1))
+        else:
+            #output :shp: batch_size, word_voc_dim
+            output = self.ffnn_multinominal(hidden.reshape(batch_size, -1))
 
         return output
 
@@ -694,8 +715,13 @@ class VocabCorrectorNet(nn.Module):
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
                         else hidden[:,-1,:]
 
-        #output :shp: 1, word_voc_dim
-        output = self.ffnn(hidden)
-        output = torch.argmax(output, dim=1)
+        if self.mode == "embedding":
+            #output :shp: (1, 300)
+            output = self.ffnn_embedding(hidden)
+            print(output.shape)
+        else:
+            #output :shp: 1, word_voc_dim
+            output = self.ffnn_multinominal(hidden)
+            output = torch.argmax(output, dim=1)
 
         return output
