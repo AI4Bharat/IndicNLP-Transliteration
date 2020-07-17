@@ -2,6 +2,7 @@ import sys
 import os
 import random
 import json
+import h5py
 from torch.utils.data import Dataset
 import numpy as np
 
@@ -113,11 +114,11 @@ class GlyphStrawboss():
         return word
 
 class VocableStrawboss():
-    def __init__(self, json_file ,lang = 'en'):
+    def __init__(self, json_file ):
         """
-        word vocab ID
+        word vocab ID generator
         """
-        self.lang = lang
+        # self.lang = lang
         with open(json_file, 'r', encoding = "utf-8") as f:
             self.words = json.load(f)
 
@@ -291,7 +292,7 @@ class XlitData(Dataset):
 
 
 class MonoCharLMData(Dataset):
-    """ Monolingual dataloader for Language Model
+    """ Monolingual dataloader for Language Model Character Level prediction
     CSV or txt (or) if JSON keys used
     depends on: Numpy, Pandas, random
     """
@@ -370,6 +371,8 @@ class MonoCharLMData(Dataset):
 
 class MonoVocabLMData(Dataset):
     """
+    Vocab based LM training model; Multinominal word level prediction
+    depends on VocableStrawboss object
     """
     def __init__(self, glyph_obj, vocab_obj, json_file,
                     input_type = "compose",
@@ -380,6 +383,7 @@ class MonoVocabLMData(Dataset):
         input_type: {'compose', 'readfromfile'}
                     compose: create masked inputs from truths
                     readfromfile: read the corresponding inputs from file
+        json_file: correct:[predict] format created by compose_corr_dataset
         """
 
         self.glyph_obj = glyph_obj
@@ -467,6 +471,101 @@ class MonoVocabLMData(Dataset):
             t = "".join(random.sample(self.glyph_obj.char2idx.keys(), random.randint(5,20) ))
             gtk_lst.append(t)
         return gtk_lst
+
+
+
+class MonoEmbedLMData(Dataset):
+    """
+    Vocab Embed based LM training model;  word embedding prediction
+    """
+    def __init__(self, glyph_obj, lang, hdf5_file,
+                    json_file = None,
+                    input_type = "compose",
+                    padding = True,
+                    max_seq_size = 50,
+                 ):
+        """
+        input_type: {'compose', 'readfromfile'}
+                    compose: create masked inputs from truths
+                    readfromfile: read the corresponding inputs from file
+        json_file: correct:[predict] format created by compose_corr_dataset
+        """
+
+        self.glyph_obj = glyph_obj
+        self.glyph_sz = glyph_obj.size()
+        self.padding = padding
+        self.max_seq_size = max_seq_size
+        self.ambiguity_ratio = 0.3 # percentage of misspellings
+        h5_array = h5py.File(hdf5_file, "r")
+        self.embed_h5 = h5_array["/"+lang]
+
+        if input_type == 'readfromfile':
+            if json_file == None:
+                raise "`readfromfile` mode requies JSON file"
+            self.crrt_str, self.misp_str = self._json2_k_v(json_file)
+        elif input_type == 'compose':
+            self.crrt_str = list(self.embed_h5.keys())
+
+        self._get_function = self._compose_corrupt_input if input_type == "compose" \
+                                else self._plain_read_input
+
+    def __getitem__(self, index):
+        return self._get_function(index)
+
+    def __len__(self):
+        return len(self.crrt_str)
+
+    def _plain_read_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.misp_str[index])
+        x = x[:self.max_seq_size] # truncate to max len
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        x_wordemb = self.embed_h5[ self.crrt_str[index] ][:]
+        return x, x_wordemb, x_sz
+
+    def _compose_corrupt_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.crrt_str[index])
+        x = x[:self.max_seq_size] # truncate to max len
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        x_mkd = self._rand_char_insert(x.copy(), x_sz)
+        x_wordemb = self.embed_h5[ self.crrt_str[index] ][:]
+        return x_mkd, x_wordemb, x_sz
+
+    def _rand_char_insert(self, arr, arr_sz):
+        m_seq = random.sample(range(1, arr_sz), int(arr_sz * self.ambiguity_ratio) )
+        arr[m_seq] = random.sample(range(7,self.glyph_sz ), len(m_seq) )
+        return arr
+
+    def _pad_sequence(self, x, max_len):
+        """ Pad sequence to maximum length;
+        Pads zero if word < max
+        Clip word if word > max
+        """
+        padded = np.zeros((max_len), dtype=np.int64)
+        if len(x) > max_len: padded[:] = x[:max_len]
+        else: padded[:len(x)] = x
+        return padded
+
+    def _json2_k_v(self, json_file):
+        ''' Convert JSON lang pairs to Key-Value lists with indexwise one2one correspondance
+        '''
+        with open(json_file, 'r', encoding = "utf-8") as f:
+            data = json.load(f)
+
+        check_set = set(self.embed_h5)
+        x = []; y = []; skipped =0
+        for k in data:
+            if k not in check_set:
+                skipped +=1
+                continue
+            for v in data[k]:
+                x.append(k); y.append(v)
+
+        print("Skipped while Loading:", skipped)
+        return x, y
 
 
 
