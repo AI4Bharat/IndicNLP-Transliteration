@@ -645,7 +645,7 @@ class VocabCorrectorNet(nn.Module):
             self.ffnn_embedding = nn.Sequential(
                 nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
                 nn.LeakyReLU(),
-                nn.Linear(self.char_embed_dim, 300), #set to fasttext size
+                nn.Linear(self.char_embed_dim,  self.output_dim), #set to fasttext size
                 )
         else:
             raise Exception("Unknown Mode mentioned")

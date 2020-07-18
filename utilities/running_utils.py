@@ -88,5 +88,20 @@ def accuracy_score_multinominal(pred_tnsr, tgt_tnsr, vocab_obj):
     return torch.tensor(crt_cnt/batch_sz)
 
 
+def accuracy_score_embedding(pred_tnsr, tgt_tnsr, annoy_obj):
+    '''Simple accuracy calculation for Correction LM training
+        For vocab treated as embedding
+    pred_tnsr: torch tensor :shp: (batch, voc_size)
+    tgt_tnsr: torch tensor :shp: (batch)
+    '''
+    batch_sz = pred_tnsr.shape[0]
+
+    crt_cnt = 0
+    for i in range(batch_sz):
+        pred = annoy_obj.get_nearest_vocab( pred_tnsr[i].cpu().numpy() )
+        tgt = annoy_obj.get_nearest_vocab( tgt_tnsr[i].cpu().numpy() )
+        if pred == tgt:
+            crt_cnt += 1
+    return torch.tensor(crt_cnt/batch_sz)
 
 
