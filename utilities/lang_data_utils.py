@@ -532,7 +532,7 @@ class MonoEmbedLMData(Dataset):
         if self.padding:
             x = self._pad_sequence(x, self.max_seq_size)
         x_mkd = self._rand_char_insert(x.copy(), x_sz)
-        x_wordemb = self.embed_h5[ self.crrt_str[index] ][:]
+        x_wordemb = self.embed_h5[ self.crrt_str[index] ][0,:]
         return x_mkd, x_wordemb, x_sz
 
     def _rand_char_insert(self, arr, arr_sz):
@@ -595,6 +595,8 @@ class AnnoyStrawboss():
 
 
     def _create_annoy_index(self, hdf5_file, save_prefix= None):
+        print("Creating Annoy tree object")
+
         embeds = h5py.File(hdf5_file, "r")['/'+self.lang]
         t = AnnoyIndex(self.vec_sz, 'angular')  # Length of item vector that will be indexed
         for i, w in enumerate(self.words):
@@ -614,7 +616,7 @@ class AnnoyStrawboss():
         return u
 
     def get_nearest_vocab(self, vec, count = 1):
-        vec = np.reshape(vec, newshape = (-1) )
+        # vec = np.reshape(vec, newshape = (-1) )
         idx_list = self.annoy_tree_obj.get_nns_by_vector(vec, count)
         word_list = [ self.words[idx] for idx in idx_list]
         return word_list

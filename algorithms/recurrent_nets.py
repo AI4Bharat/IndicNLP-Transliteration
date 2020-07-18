@@ -680,7 +680,7 @@ class VocabCorrectorNet(nn.Module):
 
 
         if self.mode == "embedding":
-            #output :shp: (1, 300)
+            #output :shp: (batch_size, 300)
             output = self.ffnn_embedding(hidden.reshape(batch_size, -1))
         else:
             #output :shp: batch_size, word_voc_dim
@@ -718,7 +718,6 @@ class VocabCorrectorNet(nn.Module):
         if self.mode == "embedding":
             #output :shp: (1, 300)
             output = self.ffnn_embedding(hidden)
-            print(output.shape)
         else:
             #output :shp: 1, word_voc_dim
             output = self.ffnn_multinominal(hidden)
