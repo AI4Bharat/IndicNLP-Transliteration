@@ -1,36 +1,44 @@
 import os
-from utilities.lang_data_utils import GlyphStrawboss, VocabSanitizer, VocableStrawboss
+import utilities.lang_data_utils as lutl
 import utilities.running_utils as rutl
 
 ''' VacabSanitizer usage
-voc_sanitize = VocabSanitizer("data/X_word_list.json")
+voc_sanitize = lutl.VocabSanitizer("data/X_word_list.json")
 result = voc_sanitize.reposition(result)
 '''
 
-hi_glyph = GlyphStrawboss("hi")
-en_glyph = GlyphStrawboss("en")
-hi_vocab = VocableStrawboss("data/maithili/mai_all_words_sorted.json")
+hi_glyph = lutl.GlyphStrawboss("hi")
+en_glyph = lutl.GlyphStrawboss("en")
+hi_vocab = lutl.VocableStrawboss("data/maithili/gom_all_words_sorted.json")
+
 device = "cpu"
 
 ##=============== Models =======================================================
 import torch
 
-from hypotheses.training_mai_103.recurrent_nets_mai_103 import model
-weight_path = "hypotheses/training_mai_103/weights/Training_mai_103_model.pth"
-# voc_sanitize = VocabSanitizer("data/X_word_list.json")
+from tasks.rnn_xlit_runner import model
+weight_path = "hypotheses/Training_gom_115/weights/Training_gom_115_model.pth"
 
 weights = torch.load( weight_path, map_location=torch.device(device))
 model.load_state_dict(weights)
 model.eval()
 
-# --- Correction model ---
-from hypotheses.training_mai_103.recurrent_nets_mai_103 import corr_model
-corr_weight_path = "hypotheses/training_mai_103/weights/Training_mai_103_corrnet.pth"
+# ------------- Correction model -----------------------------------------------
+'''
+from tasks.corr_xlit_runner import corr_model
+corr_weight_path = "hypotheses/Training_mai_116_corr3_a/weights/Training_mai_116_corr3_a_corrnet.pth"
 
 corr_weights = torch.load( corr_weight_path, map_location=torch.device(device))
 corr_model.load_state_dict(corr_weights)
 corr_model.eval()
-
+'''
+annoy_obj =lutl.AnnoyStrawboss( lang = "gom",
+                voc_json_file = "data/konkani/gom_all_words_sorted.json",
+                char_emb_pkl = "data/konkani/Gom_char_embed_dict.pkl",
+                hdf5_file = "data/konkani/Gom_additive_vocab_embeddings.hdf5",
+                annoy_tree_path = "data/konkani/Gom_word_vec.annoy",
+                # save_prefix = LOG_PATH,
+                mode = "readfromfile")
 
 ##==============================================================================
 
@@ -56,11 +64,14 @@ def inferencer(word, topk = 3):
     else:
         in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
         ## change to active or passive beam
-        out_list = model.active_beam_inference(in_vec, beam_width = topk)
-        p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in out_list]
+        p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
+        p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
 
-        out_list = [ corr_model.inference(out) for out in out_list]
-        c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in out_list]
+        '''
+        c_out_list = [ corr_model.inference(out) for out in out_list]
+        c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in c_out_list]
+        '''
+        c_result = annoy_obj.chars_to_nearest_vocab(p_result)
         result = pred_contrive(c_result, p_result)
         return result
 
