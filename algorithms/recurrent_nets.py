@@ -484,7 +484,7 @@ class Seq2Seq(nn.Module):
 
 ##----------------- Simple Correction Networks ---------------------------------
 
-class CorrectionSeqNet(nn.Module):
+class EmbedSeqNet(nn.Module):
     """ Network for correcting the prediction of char based seq2seq
     """
     def __init__(self, voc_dim, embed_dim, hidden_dim ,
@@ -500,6 +500,7 @@ class CorrectionSeqNet(nn.Module):
         self.layers = layers
         self.directions = 2 if bidirectional else 1
         self.device = device
+
 
         self.embedding = nn.Embedding(self.voc_dim, self.embed_dim)
 
@@ -543,9 +544,9 @@ class CorrectionSeqNet(nn.Module):
         output, _ = self.corr_rnn(x)
 
         ## pad the sequence to the max length in the batch
-        # output: max_length, batch_size, hidden_dim)
+        # output: max_length, batch_size, embed_dim
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
-        # output: batch_size, mx_seq_length, hidden_dim
+        # output: batch_size, mx_seq_length, embed_dim
         output = output.permute(1,0,2)
 
         #output :shp: batch_size, mx_seq_length, voc_dim
@@ -577,22 +578,16 @@ class CorrectionSeqNet(nn.Module):
         x = nn.utils.rnn.pack_padded_sequence(x, src_sz, enforce_sorted=False) # unpad
 
         # output: packed_size, 1, embed_dim
-        output, _ = self.corr_rnn(x)
+        output, hidden = self.corr_rnn(x)
 
-        # output: max_length, 1, hidden_dim)
+        # output: max_length, 1, embed_dim
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
-        # output: 1, mx_seq_length, hidden_dim
+        # output: 1, mx_seq_length, embed_dim
         output = output.permute(1,0,2)
+        # output: embed_dim
+        output = torch.sum( output.squeeze(0), axis = 0)
 
-        #output :shp: 1, mx_seq_length, voc_dim
-        output = self.ffnn(output)
-
-        #pred_vecs :shp: (mx_seq_length, voc_dim)
-        pred_vecs = output.squeeze()
-        #pred_vecs :shp: (sequence_len, 1)
-        pred_arr = torch.argmax(pred_vecs, dim=1)
-
-        return pred_arr.squeeze()
+        return output
 
 
 class VocabCorrectorNet(nn.Module):
@@ -635,21 +630,11 @@ class VocabCorrectorNet(nn.Module):
         else:
             raise Exception("unknown RNN type mentioned")
 
-        if self.mode == "multinominal":
-            self.ffnn_multinominal = nn.Sequential(
+        self.ffnn_multinominal = nn.Sequential(
                 nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
                 nn.LeakyReLU(),
                 nn.Linear(self.char_embed_dim, self.output_dim),
                 )
-        elif self.mode == "embedding":
-            self.ffnn_embedding = nn.Sequential(
-                nn.Linear(self.hidden_dim * self.directions, self.char_embed_dim),
-                nn.LeakyReLU(),
-                nn.Linear(self.char_embed_dim,  self.output_dim), #set to fasttext size
-                )
-        else:
-            raise Exception("Unknown Mode mentioned")
-
 
     def forward(self, src, src_sz):
         """
@@ -678,13 +663,8 @@ class VocabCorrectorNet(nn.Module):
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
                         else hidden[:,-1,:]
 
-
-        if self.mode == "embedding":
-            #output :shp: (batch_size, 300)
-            output = self.ffnn_embedding(hidden.reshape(batch_size, -1))
-        else:
-            #output :shp: batch_size, word_voc_dim
-            output = self.ffnn_multinominal(hidden.reshape(batch_size, -1))
+        #output :shp: batch_size, word_voc_dim
+        output = self.ffnn_multinominal(hidden.reshape(batch_size, -1))
 
         return output
 
@@ -715,12 +695,8 @@ class VocabCorrectorNet(nn.Module):
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = -1) if self.directions == 2 \
                         else hidden[:,-1,:]
 
-        if self.mode == "embedding":
-            #output :shp: (1, 300)
-            output = self.ffnn_embedding(hidden)
-        else:
-            #output :shp: 1, word_voc_dim
-            output = self.ffnn_multinominal(hidden)
-            output = torch.argmax(output, dim=1)
+        #output :shp: 1, word_voc_dim
+        output = self.ffnn_multinominal(hidden)
+        output = torch.argmax(output, dim=1)
 
         return output
