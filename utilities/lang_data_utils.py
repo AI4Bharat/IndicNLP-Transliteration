@@ -299,7 +299,8 @@ class MonoCharLMData(Dataset):
     depends on: Numpy, Pandas, random
     """
     def __init__(self, glyph_obj, data_file,
-                    padding = True ):
+                    input_type = 'plain',
+                    padding = True, ):
         """
         padding: Set True if Padding with zeros is required for Batching
         """
@@ -312,28 +313,47 @@ class MonoCharLMData(Dataset):
             raise Exception('Unknown File Extension')
 
         self.glyph_obj = glyph_obj
+        self.glyph_sz = glyph_obj.size()
         self.padding = padding
-        __svec = self.glyph_obj.word2xlitvec
         self.max_seq_size = max( (len(t)+2) for t in self.src_lst) #s_tok, e_tok
+        self.ambiguity_ratio = 0.25 # percentage of misspellings
+
+        self._get_function = self._compose_corrupt_input if input_type == "corrupt" \
+                                else self._plain_read_input
 
     def __getitem__(self, index):
         '''
         x =   [$, g, e, o, #]
-        tgt = [g, e, o, #, #]
+        tgt = [$, g, e, o, #]
         '''
-
-        x = self.glyph_obj.word2xlitvec(self.src_lst[index])
-        x_sz = len(x)
-
-        tgt = np.concatenate( (x[1:], x[-1:]) )
-
-        if self.padding:
-            x = self._pad_sequence(x, self.max_seq_size)
-            tgt = self._pad_sequence(tgt, self.max_seq_size)
-        return x, tgt, x_sz
+        return self._get_function(index)
 
     def __len__(self):
         return len(self.src_lst)
+
+    def _plain_read_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.src_lst[index])
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        tgt = x
+        return x, tgt, x_sz
+
+    def _compose_corrupt_input(self, index):
+        x = self.glyph_obj.word2xlitvec(self.src_lst[index])
+        x_sz = len(x)
+        if self.padding:
+            x = self._pad_sequence(x, self.max_seq_size)
+        tgt = x
+        x_mkd = self._rand_char_insert(x.copy(), x_sz)
+
+        return x_mkd, tgt, x_sz
+
+    def _rand_char_insert(self, arr, arr_sz):
+        m_seq = random.sample(range(1, arr_sz), int(arr_sz * self.ambiguity_ratio) )
+        arr[m_seq] = random.sample(range(7,self.glyph_sz ), len(m_seq) )
+        return arr
+
 
     def _pad_sequence(self, x, max_len):
         """ Pad sequence to maximum length;

@@ -10,7 +10,7 @@ from tqdm import tqdm
 import utilities.running_utils as rutl
 import utilities.lang_data_utils as lutl
 from utilities.logging_utils import LOG2CSV
-from algorithms.recurrent_nets import EmbedSeqNet
+from algorithms.recurrent_nets import EmbedSeqNet, Encoder, Decoder, Seq2Seq
 
 ##===== Init Setup =============================================================
 INST_NAME = "Training_Test"
@@ -39,6 +39,7 @@ pretrain_wgt_path = None
 
 train_dataset = lutl.MonoCharLMData(glyph_obj,
                     data_file = "data/konkani/gom_mini_list.json",
+                    input_type = 'corrupt',
                     padding = True,
                     )
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
@@ -52,32 +53,47 @@ val_dataloader = train_dataloader
 
 ##======== Model Configuration =================================================
 
-vocab_dim = glyph_obj.size()
-char_embed_dim = 300
-hidden_dim = 300
-rnn_type = 'lstm'
-layers = 1
-bidirectional = True
-dropout = 0
+input_dim = output_dim = glyph_obj.size()
+enc_emb_dim = dec_emb_dim = 300
+enc_hidden_dim = dec_hidden_dim = 300
+rnn_type = "lstm"
+enc2dec_hid = True
+attention = True
+enc_layers = 1
+dec_layers = 2
+m_dropout = 0
+enc_bidirect = True
+enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
 
-emb_model = EmbedSeqNet( voc_dim = vocab_dim,
-                        embed_dim = char_embed_dim,
-                        hidden_dim = hidden_dim,
-                        rnn_type = 'gru', layers = 1,
-                        bidirectional = True,
-                        dropout = 0, device = device)
+emb_model = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
+                hidden_dim= enc_hidden_dim,
+                rnn_type = rnn_type, layers= enc_layers,
+                dropout= m_dropout, device = device,
+                bidirectional= enc_bidirect)
+dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
+                hidden_dim= dec_hidden_dim,
+                rnn_type = rnn_type, layers= dec_layers,
+                dropout= m_dropout,
+                use_attention = attention,
+                enc_outstate_dim= enc_outstate_dim,
+                device = device,)
 
-emb_model = emb_model.to(device)
+model = Seq2Seq(emb_model, dec, pass_enc2dec_hid=enc2dec_hid,
+                device=device)
+model = model.to(device)
+
+# model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
+
+## ----- Load Embeds -----
 
 hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
-emb_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
-
-
-# emb_model = rutl.load_pretrained(emb_model,pretrain_wgt_path) #if path empty returns unmodified
+model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 ##--------- Model Details ------------------------------------------------------
+print("emb_model params:")
 rutl.count_train_param(emb_model)
-print(emb_model)
+print(model)
 # sys.exit()
 
 ##======== Optimizer Zone ======================================================
@@ -92,7 +108,7 @@ def loss_estimator(pred, truth):
     return torch.mean(loss_)
 
 
-optimizer = torch.optim.AdamW(emb_model.parameters(), lr=learning_rate,
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate,
                              weight_decay=0)
 
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
@@ -106,7 +122,7 @@ if __name__ =="__main__":
     for epoch in range(num_epochs):
 
         #-------- Training -------------------
-        emb_model.train()
+        model.train()
         acc_loss = 0
         running_loss = []
 
@@ -116,10 +132,10 @@ if __name__ =="__main__":
             tgt = tgt.to(device)
 
             #--- forward ------
-            output = emb_model(src = src, tgt = tgt, src_sz =src_sz)
+            output = model(src = src, tgt = tgt, src_sz =src_sz)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
-            print(src, tgt)
+
             #--- backward ------
             loss.backward()
             if ( (ith+1) % acc_grad == 0):
@@ -130,23 +146,23 @@ if __name__ =="__main__":
                     .format(epoch+1, num_epochs, (ith+1)//acc_grad, acc_loss.data))
                 running_loss.append(acc_loss.item())
                 acc_loss=0
-                # break
+                break
 
         LOG2CSV(running_loss, LOG_PATH+"trainLoss.csv")
 
         #--------- Validate ---------------------
-        emb_model.eval()
+        model.eval()
         val_loss = 0
         val_accuracy = 0
         for jth, (v_src, v_tgt, v_src_sz) in enumerate(tqdm(val_dataloader)):
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
-                v_output = emb_model(src = v_src ,src_sz = v_src_sz)
+                v_output = model(src = v_src, tgt = v_tgt,src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
                 val_accuracy += rutl.accuracy_score(v_output, v_tgt, glyph_obj)
-            # break
+            break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)
 
@@ -161,7 +177,8 @@ if __name__ =="__main__":
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             best_accuracy = val_accuracy
-            torch.save(emb_model.state_dict(), WGT_PREFIX+"_embnet-{}.pth".format(epoch+1))
+            torch.save(emb_model.state_dict(), WGT_PREFIX+"_embnet-{}.pth".format(epoch+1) )
+            torch.save(model.state_dict(), WGT_PREFIX+"_full_model-{}.pth".format(epoch+1) )
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
 
