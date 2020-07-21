@@ -10,8 +10,7 @@ from tqdm import tqdm
 import utilities.running_utils as rutl
 import utilities.lang_data_utils as lutl
 from utilities.logging_utils import LOG2CSV
-from algorithms.recurrent_nets import VocabCorrectorNet
-from algorithms.transformer_nets import XFMR_CorrectorNet
+from algorithms.recurrent_nets import EmbedSeqNet
 
 ##===== Init Setup =============================================================
 INST_NAME = "Training_Test"
@@ -19,18 +18,18 @@ INST_NAME = "Training_Test"
 ##------------------------------------------------------------------------------
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-LOG_PATH = "hypotheses/"+INST_NAME+"/" #+ "_corr"
+LOG_PATH = "hypotheses/"+INST_NAME+"/" #+ "_emb"
 WGT_PREFIX = LOG_PATH+"/weights/"+ INST_NAME
 if not os.path.exists(LOG_PATH+"/weights"): os.makedirs(LOG_PATH+"/weights")
 
 ##===== Running Configuration =================================================
 
 glyph_obj = lutl.GlyphStrawboss("gom")
-annoy_obj =lutl.AnnoyStrawboss( lang = "gom",
-                voc_json_file = "data/konkani/gom_mini_list.json",
-                hdf5_file = "data/konkani/Gom-vocab_mini_embeddings.hdf5",
-                save_prefix = LOG_PATH,
-                mode = "compose")
+# annoy_obj =lutl.AnnoyStrawboss( lang = "gom",
+#                 voc_json_file = "data/konkani/gom_mini_list.json",
+#                 hdf5_file = "data/konkani/Gom-vocab_mini_embeddings.hdf5",
+#                 save_prefix = LOG_PATH,
+#                 mode = "compose")
 
 num_epochs = 1000
 batch_size = 1
@@ -38,84 +37,62 @@ acc_grad = 1
 learning_rate = 1e-3
 pretrain_wgt_path = None
 
-train_dataset = lutl.MonoEmbedLMData( glyph_obj, lang = "gom",
-                    hdf5_file= "data/konkani/Gom-vocab_mini_embeddings.hdf5",
-                    # json_file = train_file,
-                    input_type = "compose",
+train_dataset = lutl.MonoCharLMData(glyph_obj,
+                    data_file = "data/konkani/gom_mini_list.json",
                     padding = True,
-                    max_seq_size = 50,)
+                    )
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 
-val_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/Training_gom_111/acc_log_train/pred_GomEn_ann1_valid.json",
-                                    truth_file= "data/konkani/GomEn_ann1_valid.json",
-                                    save_path= LOG_PATH)
+val_dataloader = train_dataloader
 
-val_dataset = lutl.MonoEmbedLMData( glyph_obj, lang = "gom",
-                    hdf5_file= "data/konkani/Gom-vocab_mini_embeddings.hdf5",
-                    json_file = val_file, ## <<<<<<<<<<<<<<<<
-                    input_type = "readfromfile",
-                    padding = True,
-                    max_seq_size = 50,)
-
-val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
-                                shuffle=True, num_workers=0)
-
-
-test_file = lutl.compose_corr_dataset(  pred_file= "hypotheses/Training_gom_111/acc_log_train/pred_GomEn_ann1_test.json",
-                                    truth_file= "data/konkani/GomEn_ann1_test.json",
-                                    save_path= LOG_PATH)
-
-# for i in range(len(train_dataset)):
+# for i in range(10):
 #     print(train_dataset.__getitem__(i))
 
 ##======== Model Configuration =================================================
 
-input_dim = glyph_obj.size()
-output_dim = 300 #fasttext Embed size
-char_embed_dim = 512
-hidden_dim = 1024
-mode = "embedding"
+vocab_dim = glyph_obj.size()
+char_embed_dim = 300
+hidden_dim = 300
 rnn_type = 'lstm'
 layers = 1
 bidirectional = True
 dropout = 0
 
-corr_model = VocabCorrectorNet(input_dim = input_dim, output_dim = output_dim,
-                    char_embed_dim = char_embed_dim, hidden_dim = hidden_dim,
-                    mode = mode,
-                    rnn_type = rnn_type, layers = layers,
-                    bidirectional = bidirectional,
-                    dropout = 0,
-                    device = device)
+emb_model = EmbedSeqNet( voc_dim = vocab_dim,
+                        embed_dim = char_embed_dim,
+                        hidden_dim = hidden_dim,
+                        rnn_type = 'gru', layers = 1,
+                        bidirectional = True,
+                        dropout = 0, device = device)
 
-corr_model = corr_model.to(device)
+emb_model = emb_model.to(device)
 
-hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_512_ftxt.npy")
-corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
+emb_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 
-# corr_model = rutl.load_pretrained(corr_model,pretrain_wgt_path) #if path empty returns unmodified
+# emb_model = rutl.load_pretrained(emb_model,pretrain_wgt_path) #if path empty returns unmodified
 
 ##--------- Model Details ------------------------------------------------------
-rutl.count_train_param(corr_model)
-print(corr_model)
+rutl.count_train_param(emb_model)
+print(emb_model)
 # sys.exit()
 
 ##======== Optimizer Zone ======================================================
 
-criterion = torch.nn.CosineEmbeddingLoss()
+criterion = torch.nn.CrossEntropyLoss()
 
 def loss_estimator(pred, truth):
     """
     """
-    loss_ = criterion(pred, truth, target = torch.tensor(1) )
-
+    mask = truth.ge(1).type(torch.FloatTensor).to(device)
+    loss_ = criterion(pred, truth) * mask
     return torch.mean(loss_)
 
 
-optimizer = torch.optim.AdamW(corr_model.parameters(), lr=learning_rate,
+optimizer = torch.optim.AdamW(emb_model.parameters(), lr=learning_rate,
                              weight_decay=0)
 
 # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
@@ -129,7 +106,7 @@ if __name__ =="__main__":
     for epoch in range(num_epochs):
 
         #-------- Training -------------------
-        corr_model.train()
+        emb_model.train()
         acc_loss = 0
         running_loss = []
 
@@ -139,10 +116,10 @@ if __name__ =="__main__":
             tgt = tgt.to(device)
 
             #--- forward ------
-            output = corr_model(src = src, src_sz =src_sz)
+            output = emb_model(src = src, tgt = tgt, src_sz =src_sz)
             loss = loss_estimator(output, tgt) / acc_grad
             acc_loss += loss
-
+            print(src, tgt)
             #--- backward ------
             loss.backward()
             if ( (ith+1) % acc_grad == 0):
@@ -158,18 +135,17 @@ if __name__ =="__main__":
         LOG2CSV(running_loss, LOG_PATH+"trainLoss.csv")
 
         #--------- Validate ---------------------
-        corr_model.eval()
+        emb_model.eval()
         val_loss = 0
         val_accuracy = 0
         for jth, (v_src, v_tgt, v_src_sz) in enumerate(tqdm(val_dataloader)):
             v_src = v_src.to(device)
             v_tgt = v_tgt.to(device)
             with torch.no_grad():
-                v_output = corr_model(src = v_src ,src_sz = v_src_sz)
+                v_output = emb_model(src = v_src ,src_sz = v_src_sz)
                 val_loss += loss_estimator(v_output, v_tgt)
 
-                val_accuracy += rutl.accuracy_score_embedding(v_output, v_tgt,
-                                                        annoy_obj= annoy_obj)
+                val_accuracy += rutl.accuracy_score(v_output, v_tgt, glyph_obj)
             # break
         val_loss = val_loss / len(val_dataloader)
         val_accuracy = val_accuracy / len(val_dataloader)
@@ -185,7 +161,7 @@ if __name__ =="__main__":
             print("***saving best optimal state [Loss:{}] ***".format(val_loss.data))
             best_loss = val_loss
             best_accuracy = val_accuracy
-            torch.save(corr_model.state_dict(), WGT_PREFIX+"_corrnet-{}.pth".format(epoch+1))
+            torch.save(emb_model.state_dict(), WGT_PREFIX+"_embnet-{}.pth".format(epoch+1))
             LOG2CSV([epoch+1, val_loss.item(), val_accuracy.item()],
                     LOG_PATH+"bestCheckpoint.csv")
 
