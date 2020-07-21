@@ -491,7 +491,7 @@ class EmbedSeqNet(nn.Module):
                        rnn_type = 'gru', layers = 1,
                        bidirectional = True,
                        dropout = 0, device = "cpu"):
-        super(CorrectionSeqNet, self).__init__()
+        super(EmbedSeqNet, self).__init__()
 
         self.voc_dim = voc_dim #src_vocab_sz
         self.embed_dim = embed_dim
