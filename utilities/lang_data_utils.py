@@ -299,45 +299,41 @@ class MonoCharLMData(Dataset):
     depends on: Numpy, Pandas, random
     """
     def __init__(self, glyph_obj, data_file,
-                    padding = True, mask_ratio = 0.3, # ratio of characters to be masked
-                 ):
+                    padding = True ):
         """
         padding: Set True if Padding with zeros is required for Batching
         """
         extension = os.path.splitext(data_file)[-1]
         if extension == ".json":
-            src_lst = self._json2_x(data_file)
+            self.src_lst = self._json2_x(data_file)
         elif extension == ".txt" or extension == ".csv":
-            src_lst = self._csv2_x(data_file, extension)
+            self.src_lst = self._csv2_x(data_file, extension)
         else:
             raise Exception('Unknown File Extension')
 
-
         self.glyph_obj = glyph_obj
-        self.mask_ratio = mask_ratio
         self.padding = padding
-        #TODO: If memory insufficient for dataset move word2xlitvec to __getitem__
         __svec = self.glyph_obj.word2xlitvec
-        self.src = [ __svec(s) for s in src_lst]
-        self.mask_idx = glyph_obj.char2idx['*']
-        self.max_seq_size = max(len(t) for t in self.src) #s_tok, e_tok
+        self.max_seq_size = max( (len(t)+2) for t in self.src_lst) #s_tok, e_tok
 
     def __getitem__(self, index):
-        x_sz = len(self.src[index])
-        x = self.src[index]
+        '''
+        x =   [$, g, e, o, #]
+        tgt = [g, e, o, #, #]
+        '''
+
+        x = self.glyph_obj.word2xlitvec(self.src_lst[index])
+        x_sz = len(x)
+
+        tgt = np.concatenate( (x[1:], x[-1:]) )
+
         if self.padding:
             x = self._pad_sequence(x, self.max_seq_size)
-        x_mkd = self._rand_seq_mask(x.copy(), x_sz)
-
-        return x_mkd, x, x_sz
+            tgt = self._pad_sequence(tgt, self.max_seq_size)
+        return x, tgt, x_sz
 
     def __len__(self):
-        return len(self.src)
-
-    def _rand_seq_mask(self, arr, arr_sz):
-        m_seq = random.sample(range(1, arr_sz), int(arr_sz*self.mask_ratio) )
-        arr[m_seq] = self.mask_idx
-        return arr
+        return len(self.src_lst)
 
     def _pad_sequence(self, x, max_len):
         """ Pad sequence to maximum length;
