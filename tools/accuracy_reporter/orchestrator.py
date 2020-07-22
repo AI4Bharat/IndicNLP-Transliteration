@@ -26,7 +26,7 @@ def toggle_json(read_path, save_prefix=""):
     for t in tog_dict.keys():
         tog_dict[t] = list(tog_dict[t])
 
-    save_file = save_prefix+"Toggled-"+ os.path.basename(read_path)
+    save_file = save_prefix+"/Toggled-"+ os.path.basename(read_path)
     with open(save_file,"w", encoding = "utf-8") as f:
         json.dump(tog_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
 
@@ -64,11 +64,11 @@ def merge_pred_truth_json(pred_path, truth_path ):
 
 ##------------------------------------------------------------------------------
 
-def inference_looper(in_words, topk = 3):
+def inference_looper(in_words, topk = 3, knear = 3):
     from tasks.infer_engine import inferencer
     out_dict = {}
     for i in tqdm(in_words):
-        out_dict[i] = inferencer(i, topk=topk)
+        out_dict[i] = inferencer(i, topk=topk, knear=knear)
     return out_dict
 
 def vocab_sanity_runner(pred_json, voc_json):
@@ -106,7 +106,8 @@ if __name__ == "__main__":
     for fi in files:
         tfi =  toggle_json(fi, save_prefix=SAVE_DIR)
         words = get_from_json(tfi, "key")
-        out_dict = inference_looper(words, topk = 1)
+        out_dict = inference_looper(words, topk = 1, knear = 3)
+
         ## Testing with LM adjustments
         # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",
             # "data/konkani/gom_word_list.json")
