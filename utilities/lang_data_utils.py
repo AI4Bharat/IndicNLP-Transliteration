@@ -48,7 +48,7 @@ devanagari_scripts = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', '�
 
 
 
-#-------------------------------------------------------------------------------
+## ------------ Glyph handlers -------------------------------------------------
 
 class GlyphStrawboss():
     def __init__(self, lang = 'en'):
@@ -114,6 +114,8 @@ class GlyphStrawboss():
         word = "".join(char_list).replace('$','').replace('#','') # remove tokens
         word = word.replace("_", "").replace('*','') # remove tokens
         return word
+
+## ---------- Vocab handlers ---------------------------------------------------
 
 class VocableStrawboss():
     def __init__(self, json_file ):
@@ -190,8 +192,6 @@ class VocabSanitizer():
         new_list.extend(temp_)
 
         return new_list
-
-
 
 
 ##======== Data Reading ==========================================================
@@ -584,70 +584,6 @@ class MonoEmbedLMData(Dataset):
 
         print("Skipped while Loading:", skipped)
         return x, y
-
-## ----- Annoy Handler --------
-
-class AnnoyStrawboss():
-    """
-    Annoy object creation;
-    """
-    def __init__(self, lang, voc_json_file, char_emb_pkl,
-                hdf5_file = None, annoy_tree_path = None,
-                save_prefix = None,
-                mode = "compose"):
-        """
-        voc-json_file: Vocab file with language object
-        hdf5_file: Embedding hdf5 file tos used for creating annoy search tree
-        annoy_tree_obj: annoy index based search object to be laoded directly
-        mode: {'compose', 'readfromfile'}
-        """
-        self.vec_sz = 300
-        self.tree = 10
-        self.lang = lang
-        self.char_emb = pickle.load(open(char_emb_pkl, 'rb'))
-        self.words = json.load(open(voc_json_file, encoding="utf-8"))
-
-        if mode == 'compose':
-            self.annoy_tree_obj = self._create_annoy_index( hdf5_file, save_prefix)
-        elif mode == 'readfromfile':
-            self.annoy_tree_obj = self._load_annoy_index(annoy_tree_path)
-
-
-    def _create_annoy_index(self, hdf5_file, save_prefix= None):
-        print("Creating Annoy tree object")
-
-        embeds = h5py.File(hdf5_file, "r")['/'+self.lang]
-        t = AnnoyIndex(self.vec_sz, 'angular')  # Length of item vector that will be indexed
-        for i, w in enumerate(self.words):
-            v = embeds[w][0,:]
-            t.add_item(i, v)
-        t.build(self.tree)
-
-        if save_prefix:
-            t.save(save_prefix+'/'+self.lang+'_word_vec.annoy')
-
-        return t
-
-    def _load_annoy_index(self, annoy_tree_path):
-        u = AnnoyIndex(self.vec_sz, 'angular')
-        u.load(annoy_tree_path)
-        return u
-
-    def get_nearest_vocab(self, vec, count = 1):
-        # vec = np.reshape(vec, newshape = (-1) )
-        idx_list = self.annoy_tree_obj.get_nns_by_vector(vec, count)
-        word_list = [ self.words[idx] for idx in idx_list]
-        return word_list
-
-    def chars_to_nearest_vocab(self, word_list):
-        out_list = []
-        for word in word_list:
-            word_emb = np.zeros(shape = self.vec_sz, dtype = np.float32)
-            for c in word:
-                word_emb = word_emb + self.char_emb.get(c, 0)
-
-            out_list += self.get_nearest_vocab(word_emb)
-        return out_list
 
 ## ----- Correction Dataset -----
 
