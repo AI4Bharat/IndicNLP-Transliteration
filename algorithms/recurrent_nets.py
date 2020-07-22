@@ -50,7 +50,7 @@ class Encoder(nn.Module):
         output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
-        # output: max_length, batch_size, hidden_dim)
+        # output: max_length, batch_size, enc_emb_dim*directions)
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
 
         # output: batch_size, max_length, hidden_dim
@@ -61,9 +61,10 @@ class Encoder(nn.Module):
     def get_word_embedding(self, x):
         """
         """
-        x_sz = torch.tensor([len(src)])
+        x_sz = torch.tensor([len(x)])
+        x_ = torch.tensor(x).unsqueeze(0).to(dtype=torch.long)
         # x: 1, max_length, enc_embed_dim
-        x = self.embedding(x)
+        x = self.embedding(x_)
 
         ## pack the padded data
         # x: max_length, 1, enc_embed_dim -> for pack_pad
@@ -75,13 +76,23 @@ class Encoder(nn.Module):
         output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
         ## pad the sequence to the max length in the batch
-        # output: max_length, 1, hidden_dim)
+        # output: max_length, batch_size, enc_emb_dim*directions)
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
 
+        ## Convert bidirectional size to embed_dim
+        # output: max_length, batch_size, enc_emb_dim
+        if self.enc_directions == 2:
+            d_ = self.enc_embed_dim
+            output = output[:,:,:d_] + output[:,:,d_:]
+
+        # out_embed:shp: enc_emb_dim
         out_embed = torch.sum( output.squeeze(1), axis = 0)
+        ## Add hidden to embed
         if self.enc_embed_dim == self.enc_hidden_dim:
+            if self.enc_rnn_type == "lstm": hidden = hidden[0]
             out_embed = out_embed + torch.sum(hidden.squeeze(1), axis = 0)
 
+        # out_embed = torch.sum(hidden.squeeze(1), axis = 0)
         return out_embed
 
 
