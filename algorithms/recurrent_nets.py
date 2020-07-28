@@ -75,6 +75,7 @@ class Encoder(nn.Module):
         # hidden: n_layer**num_directions, 1, hidden_dim | if LSTM (h_n, c_n)
         output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
 
+        '''
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, enc_emb_dim*directions)
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
@@ -91,8 +92,10 @@ class Encoder(nn.Module):
         if self.enc_embed_dim == self.enc_hidden_dim:
             if self.enc_rnn_type == "lstm": hidden = hidden[0]
             out_embed = out_embed + torch.sum(hidden.squeeze(1), axis = 0)
+        '''
 
-        # out_embed = torch.sum(hidden.squeeze(1), axis = 0)
+        out_embed = hidden[0].squeeze()
+
         return out_embed
 
 

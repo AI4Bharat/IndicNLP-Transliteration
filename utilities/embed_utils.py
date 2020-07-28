@@ -77,6 +77,11 @@ class AnnoyStrawboss():
         word_list = [ self.words[idx] for idx in idx_list]
         return word_list
 
+    def get_nearest_vocab_details(self, vec, count =1):
+        idx_list = self.annoy_tree_obj.get_nns_by_vector(vec, count, include_distances=True)
+        word_list = [ self.words[idx] for idx in idx_list[0] ]
+        return word_list, idx_list[1]
+
     def chars_to_nearest_vocab(self, word_list):
         '''
         gets a word and uses pre loaded char embedding to create the word embedding
