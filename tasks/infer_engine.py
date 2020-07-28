@@ -103,6 +103,28 @@ def infer_analytics(word):
     return result
 
 
+def infer_annoy(word, topk = 1, knear = 1):
+    ''' Analytics with respect to Annoy usage
+    '''
+
+    in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
+    ## change to active or passive beam
+    p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
+    p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
+
+    emb_list = [ emb_model.get_word_embedding(out) for out in p_out_list]
+
+    c_result = []
+    for i, emb in enumerate(emb_list):
+        c_res, c_val = annoy_obj.get_nearest_vocab_details(emb, count = knear)
+        c_result.append(c_res)
+        LOG2CSV([word, i+1, p_result[i], c_res[0], c_val[0]], csv_file="Annoy_115e5_setup.csv")
+
+    c_result = sum(c_result, []) # delinieate 2d list
+    result = pred_contrive(c_result, p_result)
+    return result
+
+
 if __name__ == "__main__":
     while(1):
         a = input()
