@@ -106,7 +106,7 @@ if __name__ == "__main__":
     for fi in files:
         tfi =  toggle_json(fi, save_prefix=SAVE_DIR)
         words = get_from_json(tfi, "key")
-        out_dict = inference_looper(words, topk = 1, knear = 3)
+        out_dict = inference_looper(words, topk = 10, knear = 0)
 
         ## Testing with LM adjustments
         # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",

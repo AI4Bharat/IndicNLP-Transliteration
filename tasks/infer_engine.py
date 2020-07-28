@@ -2,6 +2,7 @@ import os
 import sys
 import utilities.lang_data_utils as lutl
 import utilities.running_utils as rutl
+from utilities.logging_utils import LOG2CSV
 
 ''' VacabSanitizer usage
 voc_sanitize = lutl.VocabSanitizer("data/X_word_list.json")
@@ -25,7 +26,7 @@ model.load_state_dict(weights)
 model.eval()
 
 # ------------- Correction model -----------------------------------------------
-'''
+''' Multinominal
 from tasks.corr_xlit_runner import corr_model
 corr_weight_path = "hypotheses/Training_mai_116_corr3_a/weights/Training_mai_116_corr3_a_corrnet.pth"
 
@@ -37,29 +38,37 @@ corr_model.eval()
     c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in c_out_list]
 '''
 
+
+
+### -------------- Annoy based correction --------------------------------------
+import utilities.embed_utils as eutl
+'''
 from tasks.emb_xlit_runner import emb_model
-emb_weight_path = "hypotheses/Training_gom_emb2/weights/Training_gom_emb2_embnet.pth"
+emb_weight_path = "hypotheses/Training_gom_emb5/weights/Training_gom_emb5_embnet.pth"
 
 emb_weights = torch.load( emb_weight_path, map_location=torch.device(device))
 emb_model.load_state_dict(emb_weights)
 emb_model.eval()
 
-### -------------- Annoy object ------------------------------------------------
-import utilities.embed_utils as eutl
 
 # eutl.create_annoy_index_from_model(
 #         voc_json_file = "data/konkani/gom_all_words_sorted.json",
 #         glyph_obj = hi_glyph,
 #         model_func = emb_model.get_word_embedding,
-#         save_prefix= 'hypotheses/Training_gom_emb2/emb2')
+#         vec_sz = 512,
+#         save_prefix= 'hypotheses/Training_gom_emb6/Gom_emb6')
 # sys.exit()
 
 annoy_obj = eutl.AnnoyStrawboss(
                 voc_json_file = "data/konkani/gom_all_words_sorted.json",
-                annoy_tree_path = "hypotheses/Training_gom_emb2/Gom_emb2_word_vec.annoy",
-                vec_sz =300)
+                annoy_tree_path = "hypotheses/Training_gom_emb5/Gom_emb5_word_vec.annoy",
+                vec_sz = 1024)
+'''
 
 ##==============================================================================
+
+voc_sanitize = lutl.VocabSanitizer("data/konkani/gom_all_words_sorted.json")
+
 
 def pred_contrive(corr_lst, pred_lst):
     out =[]
@@ -79,11 +88,14 @@ def inferencer(word, topk = 1, knear = 1):
     p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
     p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
 
-    emb_list = [ emb_model.get_word_embedding(out) for out in p_out_list]
+    # emb_list = [ emb_model.get_word_embedding(out) for out in p_out_list]
 
-    c_result = [annoy_obj.get_nearest_vocab(emb, count = knear) for emb in emb_list ]
-    c_result = sum(c_result, []) # delinieate 2d list
-    result = pred_contrive(c_result, p_result)
+    # c_result = [annoy_obj.get_nearest_vocab(emb, count = knear) for emb in emb_list ]
+    # c_result = sum(c_result, []) # delinieate 2d list
+    # result = pred_contrive(c_result, p_result)
+
+    result = voc_sanitize.reposition(p_result)
+
     return result
 
 
@@ -103,7 +115,7 @@ def infer_analytics(word):
     return result
 
 
-def infer_annoy(word, topk = 1, knear = 1):
+def infer_annoy_analytics(word, topk = 1, knear = 1):
     ''' Analytics with respect to Annoy usage
     '''
 
