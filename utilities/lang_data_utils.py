@@ -614,3 +614,31 @@ def compose_corr_dataset(pred_file, truth_file,
     return save_file
 
 
+
+def merge_xlit_jsons(filepath_list, save_prefix = ""):
+
+    data_list = []
+    for fpath in filepath_list:
+        with open(fpath, 'r', encoding = "utf-8") as f:
+            data_list.append(json.load(f))
+
+    whole_dict = dict()
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk] = set()
+
+    for dat in data_list:
+        for dk in dat:
+            whole_dict[dk].update(dat[dk])
+
+    for k in whole_dict:
+        whole_dict[k] = list(whole_dict[k])
+
+    print("Total Key count:", len(whole_dict))
+    save_path = save_prefix+"merged_file.json"
+    with open(save_path,"w", encoding = "utf-8") as f:
+        json.dump(whole_dict, f, ensure_ascii=False, indent=4, sort_keys=True,)
+
+    return save_path
+
+
