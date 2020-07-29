@@ -8,7 +8,7 @@ import os
 import sys
 from tqdm import tqdm
 import utilities.running_utils as rutl
-from utilities.lang_data_utils import XlitData, GlyphStrawboss
+from utilities.lang_data_utils import XlitData, GlyphStrawboss, merge_xlit_jsons
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
@@ -36,15 +36,13 @@ learning_rate = 1e-3
 teacher_forcing, teach_force_till, teach_decay_pereph = 1, 10, 0
 pretrain_wgt_path = None
 
+# train_file = merge_xlit_jsons(["data/hindi/HiEn_train1.json",
+#                                 "data/hindi/HiEn_train2.json" ],
+#                                 save_prefix= LOG_PATH)
+
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
                         padding=True)
-
-## For monoLing
-# train_dataset = MonoLMData(glyph_obj = src_glyph,
-#                         data_file='data/mono/hindi_words_varnam.csv',
-#                         padding=True)
-# val_dataset = train_dataset
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -64,8 +62,8 @@ val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
 
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
-enc_emb_dim = 512
-dec_emb_dim = 512
+enc_emb_dim = 300
+dec_emb_dim = 300
 enc_hidden_dim = 512
 dec_hidden_dim = 512
 rnn_type = "lstm"
@@ -106,7 +104,7 @@ model = model.to(device)
 
 
 ##------ Model Details ---------------------------------------------------------
-# rutl.count_train_param(model)
+rutl.count_train_param(model)
 print(model)
 
 
