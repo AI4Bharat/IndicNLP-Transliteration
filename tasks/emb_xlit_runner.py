@@ -54,15 +54,15 @@ val_dataloader = train_dataloader
 ##======== Model Configuration =================================================
 
 input_dim = output_dim = glyph_obj.size()
-enc_emb_dim = dec_emb_dim = 300
-enc_hidden_dim = dec_hidden_dim = 300
+enc_emb_dim = dec_emb_dim = 1024
+enc_hidden_dim = dec_hidden_dim = 1024
 rnn_type = "lstm"
 enc2dec_hid = True
-attention = True
+attention = False
 enc_layers = 1
-dec_layers = 2
+dec_layers = 1
 m_dropout = 0
-enc_bidirect = True
+enc_bidirect = False
 enc_outstate_dim = enc_hidden_dim * (2 if enc_bidirect else 1)
 
 emb_model = Encoder(  input_dim= input_dim, embed_dim = enc_emb_dim,
@@ -86,9 +86,9 @@ model = model.to(device)
 
 ## ----- Load Embeds -----
 
-hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
-model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
-model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+# hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
+# model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+# model.encoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
 ##--------- Model Details ------------------------------------------------------
 print("emb_model params:")
