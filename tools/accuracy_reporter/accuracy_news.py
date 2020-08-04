@@ -111,7 +111,7 @@ def evaluate(input_data, test_data, verbose=True, topk_acc =1):
             candidates = input_data[src_word]
             references = test_data[src_word]
 
-            acc[src_word] = max([int(cand == ref) for ref in references for cand in candidates[:topk_acc]]) # either 1 or 0
+            acc[src_word] = max([int(cand == ref) for ref in references for cand in candidates ]) # either 1 or 0
 
             f[src_word], f_best_match_ref[src_word], f_best_match_cand[src_word] = f_score(candidates, references)
 

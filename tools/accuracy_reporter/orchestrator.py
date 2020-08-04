@@ -94,8 +94,17 @@ files = [
     # ROOT_PATH+"data/konkani/GomEn_ann1_test.json",
 
     # ROOT_PATH+"data/maithili/MaiEn_ann1_train.json",
-    ROOT_PATH+"data/maithili/MaiEn_ann1_valid.json",
-    ROOT_PATH+"data/maithili/MaiEn_ann1_test.json",
+    # ROOT_PATH+"data/maithili/MaiEn_ann1_valid.json",
+    # ROOT_PATH+"data/maithili/MaiEn_ann1_test.json",
+
+    # ROOT_PATH+"data/marathi/MrEn_dakshina_train.json",
+    # ROOT_PATH+"data/marathi/MrEn_dakshina_valid.json",
+    # ROOT_PATH+"data/marathi/MrEn_dakshina_test.json",
+
+    # ROOT_PATH+"data/hindi/HiEn_xlit_valid.json",
+    # ROOT_PATH+"data/hindi/HiEn_news18_dev.json",
+    # ROOT_PATH+"data/hindi/HiEn_dakshina_test.json",
+    # ROOT_PATH+"data/hindi/HiEn_ann1_test.json",
 ]
 
 SAVE_DIR = "hypotheses/training_Test/acc_log"
