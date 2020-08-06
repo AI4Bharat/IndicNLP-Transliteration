@@ -28,4 +28,5 @@ https://localhost:8000/tl/gom/ama  <br>
 Language Codes:
 * Goan Konkani - gom
 * Maithili - mai
+* Hindi - hi
 
