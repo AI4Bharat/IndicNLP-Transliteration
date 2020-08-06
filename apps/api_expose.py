@@ -11,6 +11,7 @@ import traceback
 import os
 import sys
 import enum
+import csv
 
 class XlitError(enum.Enum):
     lang_err = "Unsupported langauge ID requested"
@@ -28,6 +29,26 @@ SSL_FILES = None
 #              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
 
+## ------------------------- Logging ---------------------------------------- ##
+
+os.makedirs('logs/', exist_ok=True)
+USER_CHOICES_LOGS = 'logs/user_choices.csv'
+
+# Write CSV header
+USER_DATA_FIELDS = ['user_ip', 'timestamp', 'input', 'lang', 'output', 'topk_index']
+if not os.path.isfile(USER_CHOICES_LOGS):
+    with open(USER_CHOICES_LOGS, 'w', buffering=1) as f:
+        writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+        writer.writeheader()
+
+def write_userdata(data):
+    with open(USER_CHOICES_LOGS, 'a', buffering=1) as f:
+        writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+        writer.writerow(data)
+    return
+
+## ---------------------------- API End-points ------------------------------ ##
+
 @app.route('/languages', methods = ['GET', 'POST'])
 def supported_languages():
     # Format: https://api.varnamproject.com/languages
@@ -38,7 +59,7 @@ def supported_languages():
             "Identifier": code,
             "DisplayName": name,
             "Author": "AI4Bharat",
-            "CompiledDate": "23-June-2020",
+            "CompiledDate": "5-Aug-2020",
             "IsStable": True
         })
     # TODO: Save this variable permanently, as it will be constant
@@ -88,14 +109,17 @@ def reverse_xlit_api(lang_code, word):
     respose['error'] = 'Not yet implemented!'
     return jsonify(response)
 
-def host_https():
-    https_server = WSGIServer(('0.0.0.0', 443), app,
-                                     certfile=SSL_FILES[0], keyfile=SSL_FILES[1])
-    print('Starting HTTPS Server...')
-    https_server.serve_forever()
-    return
+@app.route('/learn', methods=['POST'])
+def learn_from_user():
+    data = request.get_json(force=True)
+    data['user_ip'] = request.remote_addr
+    data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
+    write_userdata(data)
+    return jsonify({'status': 'Thanks bro'})
 
-##------------------------------------------------------------------------------
+
+
+## ----------------------------- Xlit Engine -------------------------------- ##
 
 BASEPATH = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(BASEPATH)
@@ -112,14 +136,14 @@ class XlitEngine():
             del self.langs['hi']
 
         try:
-            from models.konkani.gom_program111c1 import inference_engine as konkani_engine
+            from models.konkani.gom_program116 import inference_engine as konkani_engine
             self.konkani_engine = konkani_engine
         except Exception as error:
             print("Failure in loading Konkani \n", error)
             del self.langs['gom']
 
         try:
-            from models.maithili.mai_program116c3 import inference_engine as maithili_engine
+            from models.maithili.mai_program120 import inference_engine as maithili_engine
             self.maithili_engine = maithili_engine
         except Exception as error:
             print("Failure in loading Maithili \n", error)
@@ -150,7 +174,15 @@ class XlitEngine():
         accepted = "abcdefghijklmnopqrstuvwxyz"
         word = ''.join([i for i in word if i in accepted])
         return word
-#-------------------------------------------------------------------------------
+
+## -------------------------- Server Setup ---------------------------------- ##
+
+def host_https():
+    https_server = WSGIServer(('0.0.0.0', 443), app,
+                                     certfile=SSL_FILES[0], keyfile=SSL_FILES[1])
+    print('Starting HTTPS Server...')
+    https_server.serve_forever()
+    return
 
 if __name__ == '__main__':
     engine = XlitEngine()
