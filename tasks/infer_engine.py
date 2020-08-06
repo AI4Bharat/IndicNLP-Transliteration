@@ -81,7 +81,7 @@ def pred_contrive(corr_lst, pred_lst):
     return out[:len(corr_lst)]
 
 
-def inferencer(word, topk = 1, knear = 1):
+def inferencer(word, topk = 5, knear = 1):
 
     in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
     ## change to active or passive beam

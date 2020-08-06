@@ -81,7 +81,7 @@ def vocab_sanity_runner(pred_json, voc_json):
     pred_dict = json.load(open(pred_json))
     out_dict = {}
     for k in pred_dict.keys():
-        out_dict[k] = voc_sanity.remove_astray(pred_dict[k])
+        out_dict[k] = voc_sanity.reposition(pred_dict[k])
 
     return out_dict
 
