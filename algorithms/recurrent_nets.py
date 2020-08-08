@@ -384,7 +384,6 @@ class Seq2Seq(nn.Module):
             """
             return p_tup[0]
 
-        import sys
         batch_size = 1
         start_tok = src[0]
         end_tok = src[-1]
