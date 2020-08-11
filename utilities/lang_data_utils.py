@@ -369,6 +369,7 @@ class MonoCharLMData(Dataset):
     """
     def __init__(self, glyph_obj, data_file,
                     input_type = 'plain',
+                    shift_left_tgt = False,
                     padding = True, ):
         """
         padding: Set True if Padding with zeros is required for Batching
@@ -390,6 +391,11 @@ class MonoCharLMData(Dataset):
         self._get_function = self._compose_corrupt_input if input_type == "corrupt" \
                                 else self._plain_read_input
 
+        if shift_left_tgt:
+            self.shifter = self._shift_arr
+        else:
+            self.shifter = self._dummy
+
     def __getitem__(self, index):
         '''
         x =   [$, g, e, o, #]
@@ -405,7 +411,7 @@ class MonoCharLMData(Dataset):
         x_sz = len(x)
         if self.padding:
             x = self._pad_sequence(x, self.max_seq_size)
-        tgt = x
+        tgt = self.shifter( x.copy() )
         return x, tgt, x_sz
 
     def _compose_corrupt_input(self, index):
@@ -434,6 +440,13 @@ class MonoCharLMData(Dataset):
         else: padded[:len(x)] = x
         return padded
 
+    def _shift_arr(self, a):
+        a[0:-1] = a[1:]
+        return a
+
+    def _dummy(self, a):
+        return a
+
     def _json2_x(self, json_file):
         ''' Read Mono data from JSON lang pairs
         '''
@@ -455,6 +468,8 @@ class MonoCharLMData(Dataset):
             df = pandas.read_csv(csv_file)
         x = df.iloc[:,0]
         return list(x)
+
+
 
 class MonoVocabLMData(Dataset):
     """

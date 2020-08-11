@@ -11,6 +11,8 @@ class RunMode(enum.Enum):
     infer = "inference"
     test  = "testing"
 
+## ================ Parameters =================================================
+
 def load_pretrained(model, weight_path, flexible = False):
     if not weight_path:
         return model
@@ -30,7 +32,13 @@ def count_train_param(model):
     print('The model has {} trainable parameters'.format(train_params_count))
     return train_params_count
 
+def freeze_params(model, exclusion_list = []):
+    ## TODO: Exclusion lists
+    for param in model.parameters():
+        param.requires_grad = False
 
+
+## =============================================================================
 def attention_weight_plotter(out_word, in_word, attention_array, save_path = ""):
     '''
     Plot heat map of attention weights
@@ -53,7 +61,7 @@ def attention_weight_plotter(out_word, in_word, attention_array, save_path = "")
     plt.clf()
 
 
-## ===================== Metrics =============================
+## ===================== Metrics ===============================================
 
 
 def accuracy_score(pred_tnsr, tgt_tnsr, glyph_obj):
