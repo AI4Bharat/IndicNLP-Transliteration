@@ -399,7 +399,7 @@ class MonoCharLMData(Dataset):
     def __getitem__(self, index):
         '''
         x =   [$, g, e, o, #]
-        tgt = [$, g, e, o, #]
+        tgt = [$, g, e, o, #] | shifting [g, e, o, #, _]
         '''
         return self._get_function(index)
 
