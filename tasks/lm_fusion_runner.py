@@ -132,6 +132,7 @@ lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 device = device,)
 model = lm_dec
 model_func = lm_dec.forward
+model = model.to(device)
 
 ##------------ Fused Net -------------------------------------------------------
 
