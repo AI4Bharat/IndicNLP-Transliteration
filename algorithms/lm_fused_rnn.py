@@ -132,6 +132,7 @@ class Decoder(nn.Module):
                        rnn_type = 'gru', layers = 1,
                        use_attention = True,
                        enc_outstate_dim = None, # enc_directions * enc_hidden_dim
+                       for_deep_fusion = False,
                        dropout = 0, device = "cpu"):
         super(Decoder, self).__init__()
 
