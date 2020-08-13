@@ -126,12 +126,12 @@ class Encoder(nn.Module):
 
         return output, hidden
 
+
 class Decoder(nn.Module):
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        rnn_type = 'gru', layers = 1,
                        use_attention = True,
                        enc_outstate_dim = None, # enc_directions * enc_hidden_dim
-                       for_deep_fusion = False,
                        dropout = 0, device = "cpu"):
         super(Decoder, self).__init__()
 
@@ -187,8 +187,7 @@ class Decoder(nn.Module):
 
         # hidden_with_time_axis: batch_size, 1, hidden_dim
         ## hidden_with_time_axis = hidden.permute(1, 0, 2) ## replaced with below 2lines
-        hidden_with_time_axis = torch.sum(hidden, axis=0) if self.dec_rnn_type != "lstm" \
-                                else torch.sum(hidden[0], axis=0) # h_n
+        hidden_with_time_axis = torch.sum(hidden, axis=0)
 
         hidden_with_time_axis = hidden_with_time_axis.unsqueeze(1)
 
@@ -216,6 +215,9 @@ class Decoder(nn.Module):
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
         '''
+        if (hidden is None) and (self.use_attention is False):
+            raise Exception( "No use of a decoder with No attention and No Hidden")
+
         batch_sz = x.shape[0]
 
         if hidden is None:
@@ -224,6 +226,8 @@ class Decoder(nn.Module):
                                     self.dec_hidden_dim )).to(self.device)
         elif self.dec_rnn_type == 'lstm':
             hid_for_att = hidden[1] # c_n
+        else:
+            hid_for_att = hidden
 
         # x (batch_size, 1, dec_embed_dim) -> after embedding
         x = self.embedding(x)
@@ -232,7 +236,8 @@ class Decoder(nn.Module):
         if self.use_attention:
             # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
             # aw: (batch_size, max_length, 1)
-            x, aw = self.attention( x, hidden, enc_output)
+            x, aw = self.attention( x, hid_for_att, enc_output)
+
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, n_layers, hidden_size)
