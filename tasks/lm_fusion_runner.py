@@ -22,6 +22,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 LOG_PATH = "hypotheses/"+INST_NAME+"/"
 WGT_PREFIX = LOG_PATH+"weights/"+INST_NAME
+WGT_PREFIX = WGT_PREFIX + "_lmnet"
 if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================
@@ -38,23 +39,23 @@ teacher_forcing, teach_force_till, teach_decay_pereph = 1, 10, 0
 #                                 "data/hindi/HiEn_train2.json" ],
 #                                 save_prefix= LOG_PATH)
 
-# train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-#                         json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
-#                         padding=True)
+train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
+                        json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
+                        padding=True)
 
-train_dataset = MonoCharLMData(glyph_obj = tgt_glyph,
-                    data_file = "data/konkani/gom_all_words_sorted.json",
-                    input_type = 'plain',
-                    shift_left_tgt = True,
-                    padding = True, )
+# train_dataset = MonoCharLMData(glyph_obj = tgt_glyph,
+#                     data_file = "data/konkani/gom_all_words_sorted.json",
+#                     input_type = 'plain',
+#                     shift_left_tgt = True,
+#                     padding = True, )
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
-# val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-#                         json_file='data/konkani/GomEn_ann1_valid.json', file_map = "LangEn",
-#                         padding=True)
-val_dataset = train_dataset
+val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
+                        json_file='data/konkani/GomEn_ann1_valid.json', file_map = "LangEn",
+                        padding=True)
+# val_dataset = train_dataset
 
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
@@ -64,9 +65,9 @@ val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
 
 
 ##===== Model Configuration =================================================
-'''
+
 ##------------- Basenet -----------------------------------------------------
-WGT_PREFIX = WGT_PREFIX + "_basenet"
+
 input_dim = src_glyph.size()
 output_dim = tgt_glyph.size()
 enc_emb_dim = 300
@@ -99,13 +100,9 @@ dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
 model = Seq2SeqLMFusion(enc, dec, pass_enc2dec_hid=enc2dec_hid,
                 device=device)
 model = model.to(device)
-
 model_func = model.basenet_forward
 
-pretrain_wgt_path = None
-# model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
-
-## ----- Load Embeds -----
+### ----- Load Embeds -----
 
 hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
 model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
@@ -113,29 +110,41 @@ model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 en_emb_vecs = np.load("data/embeds/fasttext/en_char_300d_fasttext.npy")
 model.encoder.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
 
-'''
+# pretrain_wgt_path = None
+# model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
+
 
 ##--------------- Langauge Model -----------------------------------------------
-WGT_PREFIX = WGT_PREFIX + "_lmnet"
-tgt_glyph = GlyphStrawboss("hi")
-output_dim = tgt_glyph.size()
-dec_emb_dim = 512
-dec_hidden_dim = 512
-rnn_type = "lstm"
-dec_layers = 2
-m_dropout = 0
 
-lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
-                hidden_dim= dec_hidden_dim,
-                rnn_type = rnn_type, layers= dec_layers,
-                dropout= m_dropout,
-                device = device,)
-model = lm_dec
-model_func = lm_dec.forward
-model = model.to(device)
+# tgt_glyph = GlyphStrawboss("hi")
+# output_dim = tgt_glyph.size()
+# dec_emb_dim = 512
+# dec_hidden_dim = 512
+# rnn_type = "lstm"
+# dec_layers = 2
+# m_dropout = 0
+
+# lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
+#                 hidden_dim= dec_hidden_dim,
+#                 rnn_type = rnn_type, layers= dec_layers,
+#                 dropout= m_dropout,
+#                 device = device,)
+# model = lm_dec
+# model_func = lm_dec.forward
+# model = model.to(device)
 
 ##------------ Fused Net -------------------------------------------------------
 
+# model = Seq2SeqLMFusion(
+#                 encoder = enc,
+#                 decoder = dec,
+#                 pass_enc2dec_hid=enc2dec_hid,
+#                 lm_decoder = lm_dec,
+#                 for_deep_fusion = True,
+#                 dropout = 0, device = device)
+
+# model = model.to(device)
+# model_func = model.deep_fuse_forward
 
 ##------ Model Details ---------------------------------------------------------
 rutl.count_train_param(model)
