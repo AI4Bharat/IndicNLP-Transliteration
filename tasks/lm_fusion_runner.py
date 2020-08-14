@@ -65,7 +65,7 @@ val_dataloader = DataLoader(val_dataset, batch_size=batch_size,
 
 
 ##===== Model Configuration =================================================
-
+for_deep_fusion = True
 ##------------- Basenet -----------------------------------------------------
 
 input_dim = src_glyph.size()
@@ -94,6 +94,7 @@ dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 dropout= m_dropout,
                 use_attention = attention,
                 enc_outstate_dim= enc_outstate_dim,
+                for_deep_fusion= for_deep_fusion,
                 device = device,)
 
 
@@ -127,8 +128,10 @@ m_dropout = 0
 lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 hidden_dim= dec_hidden_dim,
                 rnn_type = rnn_type, layers= dec_layers,
+                for_deep_fusion = for_deep_fusion,
                 dropout= m_dropout,
                 device = device,)
+
 # model = lm_dec
 # model_func = lm_dec.forward
 # model = model.to(device)
@@ -140,13 +143,14 @@ model = Seq2SeqLMFusion(
                 decoder = dec,
                 pass_enc2dec_hid=enc2dec_hid,
                 lm_decoder = lm_dec,
-                for_deep_fusion = False,
+                for_deep_fusion = for_deep_fusion,
                 dropout = 0, device = device)
 
 model = model.to(device)
 
 model.fusion_initial_weight_loader(basewgt_path ='hypotheses/Training_gom_121/Training_gom_121_base/weights/Training_gom_121_base_model.pth' ,
                     lmwgt_path='hypotheses/Training_gom_121/Training_gom_121_lm/weights/Training_gom_121_lm_lmnet_model.pth' ,)
+model.lm_decoder = rutl.freeze_params(model.lm_decoder)
 
 model_func = model.deep_fuse_forward
 

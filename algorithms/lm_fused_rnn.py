@@ -276,7 +276,7 @@ class Decoder(nn.Module):
         if self.use_attention:
             # x (batch_size, 1, dec_embed_dim + hidden_size) -> after attention
             # aw: (batch_size, max_length, 1)
-            x, aw = self.attention( x, hidden, enc_output)
+            x, aw = self.attention( x, hid_for_att, enc_output)
 
         # passing the concatenated vector to the GRU
         # output: (batch_size, n_layers, hidden_size)
@@ -407,7 +407,7 @@ class Seq2SeqLMFusion(nn.Module):
         self.device = device
         self.lm_decoder = lm_decoder
         self.pass_enc2dec_hid = pass_enc2dec_hid
-
+        self.for_deep_fusion = for_deep_fusion
         self.dec_hidden_dim = self.decoder.dec_hidden_dim
 
 
@@ -440,15 +440,22 @@ class Seq2SeqLMFusion(nn.Module):
         for k in basewgt_dict.keys():
             if 'decoder.' in k:
                 dec_dict[k.replace("decoder.", "")] = basewgt_dict[k]
-        self.decoder.load_state_dict(dec_dict)
 
         enc_dict = {}
         for k in basewgt_dict.keys():
             if 'encoder.' in k:
                 enc_dict[k.replace("encoder.", "")] = basewgt_dict[k]
-        self.encoder.load_state_dict(enc_dict)
 
         lmwgt_dict = torch.load(lmwgt_path, map_location=torch.device(self.device))
+
+        ## Remove Obsolete weights
+        if self.for_deep_fusion:
+            for r in ["fc.0.weight", "fc.0.bias", "fc.2.weight", "fc.2.bias"]:
+                dec_dict.pop(r)
+                lmwgt_dict.pop(r)
+
+        self.decoder.load_state_dict(dec_dict)
+        self.encoder.load_state_dict(enc_dict)
         self.lm_decoder.load_state_dict(lmwgt_dict)
 
     def basenet_forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
@@ -621,7 +628,7 @@ class Seq2SeqLMFusion(nn.Module):
                 dec_output = nn.functional.log_softmax(dec_output, dim=1)
                 lm_output = nn.functional.log_softmax(lm_output, dim=1)
 
-                shl_output = dec_output + lm_output
+                shl_output = dec_output
 
                 # pred_topk.values & pred_topk.indices: (1, beam_width)
                 pred_topk = torch.topk(shl_output, k=beam_width, dim=1)
