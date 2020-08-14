@@ -22,7 +22,6 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 LOG_PATH = "hypotheses/"+INST_NAME+"/"
 WGT_PREFIX = LOG_PATH+"weights/"+INST_NAME
-WGT_PREFIX = WGT_PREFIX + "_lmnet"
 if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================

@@ -628,7 +628,7 @@ class Seq2SeqLMFusion(nn.Module):
                 dec_output = nn.functional.log_softmax(dec_output, dim=1)
                 lm_output = nn.functional.log_softmax(lm_output, dim=1)
 
-                shl_output = dec_output
+                shl_output = dec_output + lm_output
 
                 # pred_topk.values & pred_topk.indices: (1, beam_width)
                 pred_topk = torch.topk(shl_output, k=beam_width, dim=1)
