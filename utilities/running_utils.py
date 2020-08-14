@@ -36,6 +36,7 @@ def freeze_params(model, exclusion_list = []):
     ## TODO: Exclusion lists
     for param in model.parameters():
         param.requires_grad = False
+    return model
 
 
 ## =============================================================================
