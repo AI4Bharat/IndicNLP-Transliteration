@@ -99,6 +99,20 @@ def inferencer(word, topk = 5, knear = 1):
     return result
 
 
+### For Fused Variant
+'''
+from tasks.lm_fusion_runner import model
+def inferencer(word, topk = 5):
+
+    in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
+    ## change to active or passive beam
+    p_out_list = model.shallow_fuse_inference(in_vec, beam_width = topk)
+    p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
+
+    result = p_result
+
+    return result
+'''
 
 def infer_analytics(word):
     """Analytics by ploting values
