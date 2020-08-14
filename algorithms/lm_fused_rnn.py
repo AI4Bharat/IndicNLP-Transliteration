@@ -429,6 +429,28 @@ class Seq2SeqLMFusion(nn.Module):
                 nn.Linear(self.dec_hidden_dim, self.decoder.output_dim),
                 )
 
+    def fusion_initial_weight_loader(self, basewgt_path, lmwgt_path, ):
+        """ For loading the basenet and LM weights into the object intially
+        Key names are usage specific
+        """
+
+        basewgt_dict = torch.load(basewgt_path, map_location=torch.device(self.device))
+
+        dec_dict = {}
+        for k in basewgt_dict.keys():
+            if 'decoder.' in k:
+                dec_dict[k.replace("decoder.", "")] = basewgt_dict[k]
+        self.decoder.load_state_dict(dec_dict)
+
+        enc_dict = {}
+        for k in basewgt_dict.keys():
+            if 'encoder.' in k:
+                enc_dict[k.replace("encoder.", "")] = basewgt_dict[k]
+        self.encoder.load_state_dict(enc_dict)
+
+        lmwgt_dict = torch.load(lmwgt_path, map_location=torch.device(self.device))
+        self.lm_decoder.load_state_dict(lmwgt_dict)
+
     def basenet_forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
         '''
         src: (batch_size, sequence_len.padded)
@@ -578,6 +600,8 @@ class Seq2SeqLMFusion(nn.Module):
         # top_pred[][3] = lm_hidden
         top_pred_list = [ (0, start_tok.unsqueeze(0) , init_dec_hidden, None) ]
         for t in range(max_tgt_sz):
+            cur_pred_list = []
+
             for p_tup in top_pred_list:
                 if p_tup[1][-1] == end_tok:
                     cur_pred_list.append(p_tup)
@@ -597,7 +621,7 @@ class Seq2SeqLMFusion(nn.Module):
                 dec_output = nn.functional.log_softmax(dec_output, dim=1)
                 lm_output = nn.functional.log_softmax(lm_output, dim=1)
 
-                shl_ouput = dec_output @ lm_output
+                shl_output = dec_output * lm_output
 
                 # pred_topk.values & pred_topk.indices: (1, beam_width)
                 pred_topk = torch.topk(shl_output, k=beam_width, dim=1)
@@ -706,6 +730,8 @@ class Seq2SeqLMFusion(nn.Module):
         # top_pred[][3] = lm_hidden
         top_pred_list = [ (0, start_tok.unsqueeze(0) , init_dec_hidden, None) ]
         for t in range(max_tgt_sz):
+            cur_pred_list = []
+
             for p_tup in top_pred_list:
                 if p_tup[1][-1] == end_tok:
                     cur_pred_list.append(p_tup)
@@ -749,3 +775,5 @@ class Seq2SeqLMFusion(nn.Module):
         pred_tnsr_list = [t[1] for t in top_pred_list ]
 
         return pred_tnsr_list
+
+

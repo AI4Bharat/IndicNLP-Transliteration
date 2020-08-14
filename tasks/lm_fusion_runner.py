@@ -97,18 +97,18 @@ dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 device = device,)
 
 
-model = Seq2SeqLMFusion(enc, dec, pass_enc2dec_hid=enc2dec_hid,
-                device=device)
-model = model.to(device)
-model_func = model.basenet_forward
+# model = Seq2SeqLMFusion(enc, dec, pass_enc2dec_hid=enc2dec_hid,
+#                 device=device)
+# model = model.to(device)
+# model_func = model.basenet_forward
 
 ### ----- Load Embeds -----
 
-hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
-model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
+# hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_300d_fasttext.npy")
+# model.decoder.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
-en_emb_vecs = np.load("data/embeds/fasttext/en_char_300d_fasttext.npy")
-model.encoder.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
+# en_emb_vecs = np.load("data/embeds/fasttext/en_char_300d_fasttext.npy")
+# model.encoder.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
 
 # pretrain_wgt_path = None
 # model = rutl.load_pretrained(model,pretrain_wgt_path) #if path empty returns unmodified
@@ -116,35 +116,39 @@ model.encoder.embedding.weight.data.copy_(torch.from_numpy(en_emb_vecs))
 
 ##--------------- Langauge Model -----------------------------------------------
 
-# tgt_glyph = GlyphStrawboss("hi")
-# output_dim = tgt_glyph.size()
-# dec_emb_dim = 512
-# dec_hidden_dim = 512
-# rnn_type = "lstm"
-# dec_layers = 2
-# m_dropout = 0
+tgt_glyph = GlyphStrawboss("hi")
+output_dim = tgt_glyph.size()
+dec_emb_dim = 300
+dec_hidden_dim = 512
+rnn_type = "lstm"
+dec_layers = 2
+m_dropout = 0
 
-# lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
-#                 hidden_dim= dec_hidden_dim,
-#                 rnn_type = rnn_type, layers= dec_layers,
-#                 dropout= m_dropout,
-#                 device = device,)
+lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
+                hidden_dim= dec_hidden_dim,
+                rnn_type = rnn_type, layers= dec_layers,
+                dropout= m_dropout,
+                device = device,)
 # model = lm_dec
 # model_func = lm_dec.forward
 # model = model.to(device)
 
 ##------------ Fused Net -------------------------------------------------------
 
-# model = Seq2SeqLMFusion(
-#                 encoder = enc,
-#                 decoder = dec,
-#                 pass_enc2dec_hid=enc2dec_hid,
-#                 lm_decoder = lm_dec,
-#                 for_deep_fusion = True,
-#                 dropout = 0, device = device)
+model = Seq2SeqLMFusion(
+                encoder = enc,
+                decoder = dec,
+                pass_enc2dec_hid=enc2dec_hid,
+                lm_decoder = lm_dec,
+                for_deep_fusion = False,
+                dropout = 0, device = device)
 
-# model = model.to(device)
-# model_func = model.deep_fuse_forward
+model = model.to(device)
+
+model.fusion_initial_weight_loader(basewgt_path ='hypotheses/Training_gom_121/Training_gom_121_base/weights/Training_gom_121_base_model.pth' ,
+                    lmwgt_path='hypotheses/Training_gom_121/Training_gom_121_lm/weights/Training_gom_121_lm_lmnet_model.pth' ,)
+
+model_func = model.deep_fuse_forward
 
 ##------ Model Details ---------------------------------------------------------
 rutl.count_train_param(model)
