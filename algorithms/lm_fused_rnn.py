@@ -226,7 +226,7 @@ class Decoder(nn.Module):
             hid_for_att = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
         elif self.dec_rnn_type == 'lstm':
-            hid_for_att = hidden[1] # c_n
+            hid_for_att = hidden[0] # h_n <<<check
         else:
             hid_for_att = hidden
 
@@ -267,7 +267,9 @@ class Decoder(nn.Module):
             hid_for_att = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
         elif self.dec_rnn_type == 'lstm':
-            hid_for_att = hidden[1] # c_n
+            hid_for_att = hidden[0] # h_n <<<check
+        else:
+            hid_for_att = hidden
 
         # x (batch_size, 1, dec_embed_dim) -> after embedding
         x = self.embedding(x)

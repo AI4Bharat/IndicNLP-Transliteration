@@ -99,9 +99,6 @@ class Encoder(nn.Module):
         return out_embed
 
 
-
-
-
 class Decoder(nn.Module):
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        rnn_type = 'gru', layers = 1,
@@ -199,7 +196,7 @@ class Decoder(nn.Module):
             hid_for_att = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
         elif self.dec_rnn_type == 'lstm':
-            hid_for_att = hidden[1] # c_n
+            hid_for_att = hidden[0] # h_n
         else:
             hid_for_att = hidden
 
