@@ -166,12 +166,13 @@ class XlitEngine():
             elif lang_code == "mai":
                 return self.maithili_engine(eng_word)
 
-        except:
+        except error as Exception:
+            print("Error:", error)
             return XlitError.unknown_err
 
     def _clean(self, word):
         word = word.lower()
-        accepted = "abcdefghijklmnopqrstuvwxyz"
+        accepted = "abcdefghijklmnopqrstuvwxyz1234567890."
         word = ''.join([i for i in word if i in accepted])
         return word
 
