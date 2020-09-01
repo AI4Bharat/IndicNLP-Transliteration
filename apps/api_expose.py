@@ -129,7 +129,7 @@ class XlitEngine():
         self.langs = {"hi": "Hindi", "gom": "Konkani (Goan)", "mai": "Maithili"}
 
         try:
-            from models.hindi.program85 import inference_engine as hindi_engine
+            from models.hindi.hi_program110 import inference_engine as hindi_engine
             self.hindi_engine = hindi_engine
         except Exception as error:
             print("Failure in loading Hindi \n", error)
@@ -150,7 +150,6 @@ class XlitEngine():
             del self.langs['mai']
 
     def transliterate(self, lang_code, eng_word):
-        eng_word = self._clean(eng_word)
         if eng_word == "":
             return []
 
@@ -170,11 +169,6 @@ class XlitEngine():
             print("Error:", error)
             return XlitError.unknown_err
 
-    def _clean(self, word):
-        word = word.lower()
-        accepted = "abcdefghijklmnopqrstuvwxyz1234567890."
-        word = ''.join([i for i in word if i in accepted])
-        return word
 
 ## -------------------------- Server Setup ---------------------------------- ##
 
