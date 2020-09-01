@@ -226,7 +226,7 @@ class Decoder(nn.Module):
             hid_for_att = torch.zeros((self.dec_layers, batch_sz,
                                     self.dec_hidden_dim )).to(self.device)
         elif self.dec_rnn_type == 'lstm':
-            hid_for_att = hidden[0] # h_n <<<check
+            hid_for_att = hidden[1] #<<<< c_n used; Should have been h_n
         else:
             hid_for_att = hidden
 
@@ -504,7 +504,7 @@ class Seq2SeqLMFusion(nn.Module):
         return pred_vecs #(batch_size, output_dim, sequence_sz)
 
 
-    def basenet_inference(self, src, beam_width=3, max_tgt_sz=50):
+    def basenet_inference(self, src, beam_width=3, max_tgt_sz=50, heuristics = False):
         ''' Search based decoding
         src: (sequence_len)
         '''
@@ -571,6 +571,9 @@ class Seq2SeqLMFusion(nn.Module):
             if beam_width == sum( end_flags_ ): break
 
         pred_tnsr_list = [t[1] for t in top_pred_list ]
+
+        if heuristics:
+            return top_pred_list
 
         return pred_tnsr_list
 
