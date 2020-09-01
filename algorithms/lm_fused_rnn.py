@@ -574,6 +574,38 @@ class Seq2SeqLMFusion(nn.Module):
 
         return pred_tnsr_list
 
+    def lm_heuristics(self, src, max_tgt_sz=50):
+        ''' Probabilistic value from LM for a given word
+        src: (sequence_len)
+        '''
+        batch_size = 1
+        start_tok = src[0]
+        end_tok = src[-1]
+        max_tgt_sz = len(src)
+        src_sz = torch.tensor([len(src)])
+
+        log_probs = []
+        dec_hidden = None
+        # dec_input: (batch_size, 1)
+        dec_input = start_tok.view(1,1) # initialize to start token
+        for t in range(1, max_tgt_sz):
+            # dec_hidden: dec_layers, batch_size , dec_hidden_dim
+            # dec_output: batch_size, output_dim
+            # dec_input: (batch_size, 1)
+            dec_output, dec_hidden = self.lm_decoder.decoding( dec_input,
+                                               dec_hidden)
+            # dec_output: (1, output_dim)
+            dec_output = nn.functional.log_softmax(dec_output, dim=1)
+            log_probs.append(dec_output[0][src[t]])
+
+            dec_input = src[t].view(1,1)
+            if torch.eq(dec_input, end_tok):
+                break
+
+        prob = sum(log_probs) / len(log_probs)
+        # float
+        return prob
+
 
     def shallow_fuse_inference(self, src, beam_width=3, max_tgt_sz=50):
         ''' Search based decoding
