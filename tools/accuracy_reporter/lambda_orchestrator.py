@@ -4,6 +4,7 @@ To be run from Repo Root directory
 import os
 import sys
 import json
+from numpy import arange as np_arange
 from tqdm import tqdm
 
 def save_to_json(path, data_dict):
@@ -64,37 +65,44 @@ def merge_pred_truth_json(pred_path, truth_path ):
 
 ##------------------------------------------------------------------------------
 
-def inference_looper(in_words, topk = 3):
-    from tasks.infer_engine import inferencer
+def inference_looper(in_words, topk =10):
+    from tasks.infer_engine import lambda_experimenter
+    heur_dict = {}
+    for w in tqdm(in_words):
+        heur_dict[w] = lambda_experimenter(w, topk=topk)
+
+    save_to_json( "Heur_data.json", heur_dict )
+    sys.exit()
+    return heur_dict
+
+
+def sort_by_lambda(heur_dict, lmbd = 1):
+    from tasks.infer_engine import hi_glyph
+
+    def _energy(tup):
+        egr = lmbd*tup[1] + (1-lmbd)*tup[2]
+        return egr
+
     out_dict = {}
-    for i in tqdm(in_words):
-        out_dict[i] = inferencer(i, topk=topk)
+    for w in heur_dict:
+        word_heur = heur_dict[w]
+        word_heur.sort(reverse=True, key=_energy)
+        out_dict[w] = [ tup[0] for tup in word_heur]
+
     return out_dict
 
-def vocab_sanity_runner(pred_json, voc_json):
-    '''
-    Re-Clean Prediction json based on the known Vocabulary of the langauge
-    '''
-    from utilities.lang_data_utils import VocabSanitizer
-    voc_sanity = VocabSanitizer(voc_json)
-
-    pred_dict = json.load(open(pred_json))
-    out_dict = {}
-    for k in pred_dict.keys():
-        out_dict[k] = voc_sanity.reposition(pred_dict[k])
-
-    return out_dict
 
 
 ROOT_PATH= ""
 files = [
 
+#    ROOT_PATH+"data/konkani/GomEn_ann1_copy.json",
     # ROOT_PATH+"data/konkani/GomEn_ann1_train.json",
     # ROOT_PATH+"data/konkani/GomEn_ann1_valid.json",
     # ROOT_PATH+"data/konkani/GomEn_ann1_test.json",
 
     # ROOT_PATH+"data/maithili/MaiEn_ann1_train.json",
-    # ROOT_PATH+"data/maithili/MaiEn_ann1_valid.json",
+    ROOT_PATH+"data/maithili/MaiEn_ann1_valid.json",
     # ROOT_PATH+"data/maithili/MaiEn_ann1_test.json",
 
     # ROOT_PATH+"data/marathi/MrEn_dakshina_train.json",
@@ -105,9 +113,11 @@ files = [
     # ROOT_PATH+"data/hindi/HiEn_news18_dev.json",
     # ROOT_PATH+"data/hindi/HiEn_dakshina_test.json",
     # ROOT_PATH+"data/hindi/HiEn_ann1_test.json",
+    # ROOT_PATH+"data/hindi/zHiEn_merged_test.json",
+
 ]
 
-SAVE_DIR = "hypotheses/training_Test/acc_log"
+SAVE_DIR = "hypotheses/ACCL/Lambda_exp_ZZ/"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
@@ -115,24 +125,23 @@ if __name__ == "__main__":
     for fi in files:
         tfi =  toggle_json(fi, save_prefix=SAVE_DIR)
         words = get_from_json(tfi, "key")
-        out_dict = inference_looper(words, topk = 10)
+        heur_dict = inference_looper(words, topk = 10)
 
-        ## Testing with LM adjustments
-        # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",
-            # "data/konkani/gom_word_list.json")
+        for lmbd in np_arange(0,1.01, 0.1):
+            out_dict = sort_by_lambda(heur_dict, lmbd = lmbd)
 
-        pred_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
-        save_to_json(pred_path, out_dict)
+            pred_path = os.path.join(SAVE_DIR, "pred_{}_".format(lmbd)+os.path.basename(fi) )
+            save_to_json(pred_path, out_dict)
 
-        gt_json = tfi
-        pred_json = pred_path
-        save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
+            gt_json = tfi
+            pred_json = pred_path
+            save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
-        for topk in [10, 5, 3, 2, 1]:
-            ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
-            run_accuracy_news = "( echo {} && python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv ) | tee -a {}/Summary.txt".format(
-                            os.path.basename(fi),
-                            gt_json, pred_json, topk,
-                            save_prefix, topk, SAVE_DIR )
+            for topk in [1]:
+                ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
+                run_accuracy_news = "( echo {} Lambda:{} && python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv ) | tee -a {}/Summary.txt".format(
+                                os.path.basename(fi), lmbd,
+                                gt_json, pred_json, topk,
+                                save_prefix, topk, SAVE_DIR )
 
-            os.system(run_accuracy_news)
+                os.system(run_accuracy_news)
