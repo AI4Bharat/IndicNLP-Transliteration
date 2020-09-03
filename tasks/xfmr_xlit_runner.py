@@ -1,4 +1,4 @@
-''' RNN Seq2Seq (Encoder-Decoder) training setup
+''' Transfomer based Seq2Seq (Encoder-Decoder) training setup
 '''
 
 import torch

@@ -1,76 +1,17 @@
-'''
+"""
 Network designed with reference to: Using Monolingual Corpora in Neural Machine Translation
 https://arxiv.org/pdf/1503.03535.pdf
-'''
+"""
 
 import torch
 import torch.nn as nn
 import random
 import sys
 
-class OptimizedLSTMCell(nn.Module):
-    ''' TODO: under construction
-    reference: https://github.com/keitakurita/Practical_NLP_in_PyTorch/blob/master/deep_dives/lstm_from_scratch.ipynb
-    '''
-    def __init__(self, emb_dim, hid_dim, fusion =  False):
-        super().__init__()
-        self.emb_dim = emb_dim
-        self.hidden_size = hid_dim
-        self.fusion = fusion
-        num_chunks = 4
-        if fusion:
-            self.weight_lmc = Parameter(torch.Tensor(hid_dim, hid_dim))
-            self.bias_lmc = Parameter(torch.Tensor(hid_dim))
-        self.weight_ih = Parameter(torch.Tensor(num_chunks * hidden_size, hidden_size))
-        self.weight_hh = Parameter(torch.Tensor(num_chunks * hidden_size, input_size))
-        self.bias = Parameter(torch.Tensor(hid_dim * 4))
-        self.init_weights()
-
-    def init_weights(self):
-        for p in self.parameters():
-            if p.data.ndimension() >= 2:
-                nn.init.xavier_uniform_(p.data)
-            else:
-                nn.init.zeros_(p.data)
-
-    def forward(self,x, hidden_states = None, # (h_x, c_x)
-                        lm_hidden = None,  # h_x
-                        ):
-        """ x:shp: (batch, 1, hid_dim)
-
-        """
-        bs = x.shape[0]
-
-        if hidden_states is None:
-            h_t, c_t = (torch.zeros(self.hidden_size).to(x.device),
-                        torch.zeros(self.hidden_size).to(x.device))
-        else:
-            h_t, c_t = hidden_states
-
-        HS = self.hidden_size
-        x_t = x
-
-        gates = torch.mm(x_t, self.weight_ih.t()) + torch.mm(hx, self.weight_hh.t()) + self.bias
-        i_t, f_t, g_t, o_t = (
-            torch.sigmoid(gates[:, :HS]), # input
-            torch.sigmoid(gates[:, HS:HS*2]), # forget
-            torch.tanh(gates[:, HS*2:HS*3]),
-            torch.sigmoid(gates[:, HS*3:]), #   output
-        )
-        c_t = f_t * c_t + i_t * g_t
-        h_t = o_t * torch.tanh(c_t)
-
-        if self.fusion:
-            lm_gate = torch.sigmoid(torch.mm(lm_hidden, self.weight_lmc.t()) + self.bias_lmc)
-
-
-        hidden_seq = torch.cat(hidden_seq, dim=Dim.batch)
-        # reshape from shape (sequence, batch, feature) to (batch, sequence, feature)
-        hidden_seq = hidden_seq.transpose(Dim.batch, Dim.seq).contiguous()
-        return hidden_seq, (h_t, c_t)
-
-
 class Encoder(nn.Module):
+    '''
+    Simple RNN based encoder network
+    '''
     def __init__(self, input_dim, embed_dim, hidden_dim ,
                        rnn_type = 'gru', layers = 1,
                        bidirectional =False,
@@ -101,9 +42,9 @@ class Encoder(nn.Module):
             raise Exception("unknown RNN type mentioned")
 
     def forward(self, x, x_sz, hidden = None):
-        """
+        '''
         x_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
-        """
+        '''
         batch_sz = x.shape[0]
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
@@ -128,6 +69,9 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
+    '''
+    Used as decoder stage
+    '''
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        rnn_type = 'gru', layers = 1,
                        use_attention = True,
@@ -256,6 +200,8 @@ class Decoder(nn.Module):
 
     def get_hidden(self, x, hidden, enc_output):
         '''
+        Get Hidden for Deep fusion technique
+
         x: (batch_size, 1)
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
@@ -289,6 +235,10 @@ class Decoder(nn.Module):
 
 
 class LMDecoder(nn.Module):
+    '''
+    Language model
+    Used to train to predict next letter in a sequence
+    '''
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        rnn_type = 'gru', layers = 1,
                        for_deep_fusion = False,
@@ -326,6 +276,8 @@ class LMDecoder(nn.Module):
 
     def decoding(self, x, hidden):
         '''
+        Decoder routine ( same as Decoder )
+
         x: (batch_size, 1)
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
@@ -349,7 +301,7 @@ class LMDecoder(nn.Module):
         return output, hidden
 
     def forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
-        ''' Training alone
+        ''' Training alone; Not for inference
         '''
         batch_size = src.shape[0]
 
@@ -378,7 +330,10 @@ class LMDecoder(nn.Module):
         return pred_vecs #(batch_size, output_dim, sequence_sz)
 
     def get_hidden(self, x, hidden):
-        ''' Note: Detaches the backprop flow from tensors
+        '''
+        Hidden for Deep fusion
+        Detaches the backprop flow from tensors
+
         x: (batch_size, 1)
         enc_output: batch_size, max_length, dec_embed_dim
         hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
@@ -397,6 +352,9 @@ class LMDecoder(nn.Module):
 
 
 class Seq2SeqLMFusion(nn.Module):
+    '''
+    Used to construct seq2seq architecture with encoder decoder LM objects
+    '''
     def __init__(self, encoder, decoder,
                 pass_enc2dec_hid=False,
                 lm_decoder = None,
@@ -432,9 +390,9 @@ class Seq2SeqLMFusion(nn.Module):
                 )
 
     def fusion_initial_weight_loader(self, basewgt_path, lmwgt_path, ):
-        """ For loading the basenet and LM weights into the object intially
-        Key names are usage specific
-        """
+        ''' For loading the basenet and LM weights into the object intially
+        ! Key names are usage specific !
+        '''
 
         basewgt_dict = torch.load(basewgt_path, map_location=torch.device(self.device))
 
@@ -462,6 +420,8 @@ class Seq2SeqLMFusion(nn.Module):
 
     def basenet_forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
         '''
+        Basic Seq2seq Encoder decoder Training
+
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
         src_sz: [batch_size, 1] -  Unpadded sequence lengths
@@ -505,13 +465,16 @@ class Seq2SeqLMFusion(nn.Module):
 
 
     def basenet_inference(self, src, beam_width=3, max_tgt_sz=50, heuristics = False):
-        ''' Search based decoding
+        '''
+        Basic Seq2seq Encoder decoder inferencing
+        Active beam search based decoding
+
         src: (sequence_len)
         '''
         def _avg_score(p_tup):
-            """ Used for Sorting
+            ''' Used for Sorting
             TODO: Dividing by length of sequence power alpha as hyperparam
-            """
+            '''
             return p_tup[0]
 
         batch_size = 1
@@ -578,7 +541,9 @@ class Seq2SeqLMFusion(nn.Module):
         return pred_tnsr_list
 
     def lm_heuristics(self, src, max_tgt_sz=50):
-        ''' Probabilistic value from LM for a given word
+        '''
+        Probabilistic value from LM for a given word used as heuristics externally
+
         src: (sequence_len)
         '''
         batch_size = 1
@@ -611,14 +576,15 @@ class Seq2SeqLMFusion(nn.Module):
 
 
     def shallow_fuse_inference(self, src, beam_width=3, max_tgt_sz=50):
-        ''' Search based decoding
+        '''
+        Search based decoding based on Softmax of LM and Basenet
         src: (sequence_len)
         '''
         assert self.lm_decoder is not None, "Fusion cannot work without LM model"
         def _avg_score(p_tup):
-            """ Used for Sorting
+            ''' Used for Sorting
             TODO: Dividing by length of sequence power alpha as hyperparam
-            """
+            '''
             return p_tup[0]
 
         batch_size = 1
@@ -691,6 +657,9 @@ class Seq2SeqLMFusion(nn.Module):
 
     def deep_fuse_forward(self, src, tgt, src_sz, teacher_forcing_ratio = 0):
         '''
+        Concatenate LM hidden and Basenet hidden and retrain Fina FC to predict character
+        Gated to control influence of LM Hidden
+
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
         src_sz: [batch_size, 1] -  Unpadded sequence lengths
@@ -744,11 +713,14 @@ class Seq2SeqLMFusion(nn.Module):
 
 
     def deep_fuse_inference(self, src, beam_width=3, max_tgt_sz=50):
+        '''
+        Inferencing for deepfused model
+        '''
 
         def _avg_score(p_tup):
-            """ Used for Sorting
+            ''' Used for Sorting
             TODO: Dividing by length of sequence power alpha as hyperparam
-            """
+            '''
             return p_tup[0]
 
         batch_size = 1

@@ -1,8 +1,19 @@
+'''
+Contains classes fo RNN based trainings with features for
+1. Encoder - Decoder architecture
+2. Attention Mechanism
+3. Teacher forcing
+4. Active & Passive beam search for inference
+
+'''
 import torch
 import torch.nn as nn
 import random
 
 class Encoder(nn.Module):
+    '''
+    Simple RNN based encoder network
+    '''
     def __init__(self, input_dim, embed_dim, hidden_dim ,
                        rnn_type = 'gru', layers = 1,
                        bidirectional =False,
@@ -33,9 +44,14 @@ class Encoder(nn.Module):
             raise Exception("unknown RNN type mentioned")
 
     def forward(self, x, x_sz, hidden = None):
-        """
+        '''
         x_sz: (batch_size, 1) -  Unpadded sequence lengths used for pack_pad
-        """
+
+        Return:
+            output: (batch_size, max_length, hidden_dim)
+            hidden: (n_layer*num_directions, batch_size, hidden_dim) | if LSTM tuple -(h_n, c_n)
+
+        '''
         batch_sz = x.shape[0]
         # x: batch_size, max_length, enc_embed_dim
         x = self.embedding(x)
@@ -45,9 +61,9 @@ class Encoder(nn.Module):
         x = x.permute(1,0,2)
         x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
-        # output: packed_size, batch_size, enc_embed_dim
+        # output: packed_size, batch_size, enc_embed_dim --> hidden from all timesteps
         # hidden: n_layer**num_directions, batch_size, hidden_dim | if LSTM (h_n, c_n)
-        output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        output, hidden = self.enc_rnn(x)
 
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, enc_emb_dim*directions)
@@ -59,8 +75,12 @@ class Encoder(nn.Module):
         return output, hidden
 
     def get_word_embedding(self, x):
-        """
-        """
+        ''' Used for obtaining word embeddings from RNN
+
+        x: (1, sequence_length)
+        Return:
+            out_embed: (n_layer**num_directions, hidden_dim)
+        '''
         x_sz = torch.tensor([len(x)])
         x_ = torch.tensor(x).unsqueeze(0).to(dtype=torch.long)
         # x: 1, max_length, enc_embed_dim
@@ -71,11 +91,13 @@ class Encoder(nn.Module):
         x = x.permute(1,0,2)
         x = nn.utils.rnn.pack_padded_sequence(x, x_sz, enforce_sorted=False) # unpad
 
-        # output: packed_size, 1, enc_embed_dim
+        # output: packed_size, 1, enc_embed_dim --> hidden from all timesteps
         # hidden: n_layer**num_directions, 1, hidden_dim | if LSTM (h_n, c_n)
-        output, hidden = self.enc_rnn(x) # gru returns hidden state of all timesteps as well as hidden state at last timestep
+        output, hidden = self.enc_rnn(x)
 
-        '''
+        """
+        ## ----- Use each time step to compute embedding
+
         ## pad the sequence to the max length in the batch
         # output: max_length, batch_size, enc_emb_dim*directions)
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
@@ -92,14 +114,22 @@ class Encoder(nn.Module):
         if self.enc_embed_dim == self.enc_hidden_dim:
             if self.enc_rnn_type == "lstm": hidden = hidden[0]
             out_embed = out_embed + torch.sum(hidden.squeeze(1), axis = 0)
-        '''
+        """
 
-        out_embed = hidden[0].squeeze()
+        ## ----- use final hidden as embedding
+
+        if self.enc_rnn_type == 'lstm':
+            out_embed = hidden[0].squeeze()
+        else:
+            out_embed = hidden.squeeze()
 
         return out_embed
 
 
 class Decoder(nn.Module):
+    '''
+    Used as decoder stage
+    '''
     def __init__(self, output_dim, embed_dim, hidden_dim,
                        rnn_type = 'gru', layers = 1,
                        use_attention = True,
@@ -225,6 +255,9 @@ class Decoder(nn.Module):
 
 
 class Seq2Seq(nn.Module):
+    '''
+    Used to construct seq2seq architecture with encoder decoder objects
+    '''
     def __init__(self, encoder, decoder, pass_enc2dec_hid=False, dropout = 0, device = "cpu"):
         super(Seq2Seq, self).__init__()
 
@@ -257,10 +290,13 @@ class Seq2Seq(nn.Module):
             self.e2d_hidden_conv = nn.Conv1d(self.enc_hid_1ax, self.dec_hid_1ax, 1)
 
     def enc2dec_hidden(self, enc_hidden):
-        """
+        '''
+        Passing enc hidden as context to dec hidden;
+        incase of size mismatch do a 1D convolution (or forcefully)
+
         enc_hidden: n_layer, batch_size, hidden_dim*num_directions
         TODO: Implement the logic for LSTm bsed model
-        """
+        '''
         # hidden: batch_size, enc_layer*num_directions, enc_hidden_dim
         hidden = enc_hidden.permute(1,0,2).contiguous()
         # hidden: batch_size, dec_layers, dec_hidden_dim -> [N,C,Tstep]
@@ -373,13 +409,13 @@ class Seq2Seq(nn.Module):
         return pred_arr.squeeze().to(dtype=torch.long)
 
     def active_beam_inference(self, src, beam_width=3, max_tgt_sz=50):
-        ''' Search based decoding
+        ''' Active beam Search based decoding
         src: (sequence_len)
         '''
         def _avg_score(p_tup):
-            """ Used for Sorting
+            ''' Used for Sorting
             TODO: Dividing by length of sequence power alpha as hyperparam
-            """
+            '''
             return p_tup[0]
 
         batch_size = 1
@@ -447,18 +483,19 @@ class Seq2Seq(nn.Module):
 
     def passive_beam_inference(self, src, beam_width = 7, max_tgt_sz=50):
         '''
+        Passive Beam search based inference
         src: (sequence_len)
         '''
         def _avg_score(p_tup):
-            """ Used for Sorting
+            ''' Used for Sorting
             TODO: Dividing by length of sequence power alpha as hyperparam
-            """
+            '''
             return  p_tup[0]
 
         def _beam_search_topk(topk_obj, start_tok, beam_width):
-            """ search for sequence with maxim prob
+            ''' search for sequence with maxim prob
             topk_obj[x]: .values & .indices shape:(1, beam_width)
-            """
+            '''
             # top_pred_list[x]: tuple(prob, seq_tensor)
             top_pred_list = [ (0, start_tok.unsqueeze(0) ), ]
 
@@ -521,10 +558,13 @@ class Seq2Seq(nn.Module):
         return pred_tnsr_list
 
 ##----------------- Simple Correction Networks ---------------------------------
-
+'''
+Collection of Second waffer networks to improve hte prediction by corrective measures
+'''
 class EmbedSeqNet(nn.Module):
-    """ Network for correcting the prediction of char based seq2seq
-    """
+    ''' Network for for predicting embedding;
+    Trained with character level multinominal training
+    '''
     def __init__(self, voc_dim, embed_dim, hidden_dim ,
                        rnn_type = 'gru', layers = 1,
                        bidirectional = True,
@@ -538,7 +578,6 @@ class EmbedSeqNet(nn.Module):
         self.layers = layers
         self.directions = 2 if bidirectional else 1
         self.device = device
-
 
         self.embedding = nn.Embedding(self.voc_dim, self.embed_dim)
 
@@ -561,13 +600,12 @@ class EmbedSeqNet(nn.Module):
             nn.Linear(self.embed_dim, self.voc_dim),
             )
 
-
     def forward(self, src, tgt, src_sz):
-        """
+        '''
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
         src_sz: [batch_size, 1] -  Unpadded sequence lengths
-        """
+        '''
         batch_size = src.shape[0]
         # x: batch_size, max_length, embed_dim
         x = self.embedding(src)
@@ -629,18 +667,18 @@ class EmbedSeqNet(nn.Module):
 
 
 class VocabCorrectorNet(nn.Module):
-    """
-    Word predictor (classification) based on char-seq input
-    """
+    '''
+    Word predictor (multinominal classification) based on char-seq input
+    '''
     def __init__(self, input_dim, output_dim, char_embed_dim, hidden_dim,
                        mode = "multinominal",
                        rnn_type = 'gru', layers = 1,
                        bidirectional = True,
                        dropout = 0, device = "cpu"):
 
-        """
-        modes: {'multinominal', 'embedding'}
-        """
+        '''
+        modes: {'multinominal', 'embedding'} !Unused!
+        '''
         super(VocabCorrectorNet, self).__init__()
 
         self.input_dim = input_dim #char_vocab_sz
@@ -675,11 +713,11 @@ class VocabCorrectorNet(nn.Module):
                 )
 
     def forward(self, src, src_sz):
-        """
+        '''
         src: (batch_size, sequence_len.padded)
         tgt: (batch_size, sequence_len.padded)
         src_sz: [batch_size, 1] -  Unpadded sequence lengths
-        """
+        '''
         batch_size = src.shape[0]
         # x: batch_size, max_length, embed_dim
         x = self.embedding(src)

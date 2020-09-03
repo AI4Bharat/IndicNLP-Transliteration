@@ -1,4 +1,4 @@
-''' RNN Seq2Seq (Encoder-Decoder) training setup
+''' RNN Seq2Seq for Embedding based training setup
 '''
 
 import torch

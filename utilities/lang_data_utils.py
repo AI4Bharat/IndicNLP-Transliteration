@@ -12,24 +12,6 @@ import numpy as np
 NP_TYPE = np.int64
 
 ##====== Unicodes ==============================================================
-'''
-Note: Replace dummy chars for adding new characters
-      Don't change the order of the Characters in lists
-'''
-''' Replaced with compact version
-indoarab_numeric = [chr(alpha) for alpha in range(48, 58)]
-
-english_smallcase = [chr(alpha) for alpha in range(97, 123)] + [
-    "'",         # apostrophe U+0027
-    chr(0x2654),chr(0x2655),chr(0x2656),chr(0x2657),chr(0x2658),chr(0x2659), # Dummy placeholder for future addition
-]
-devanagari_scripts =  [chr(alpha) for alpha in range(2304, 2432)] + [
-    chr(0x200c), # ZeroWidth-NonJoiner U+200c
-    chr(0x200d), # ZeroWidthJoiner U+200d
-    chr(0x265a),chr(0x265b),chr(0x265c),chr(0x265e),chr(0x265e),chr(0x265f), # Dummy placeholders for future addition
-]
-'''
-# ----
 
 indoarab_num = [chr(alpha) for alpha in range(48, 58)]
 
@@ -46,7 +28,6 @@ devanagari_scripts = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', '�
     chr(0x200c), # ZeroWidth-NonJoiner U+200c
     chr(0x200d), # ZeroWidthJoiner U+200d
 ]
-
 
 
 ## ------------ Glyph handlers -------------------------------------------------
@@ -121,7 +102,7 @@ class GlyphStrawboss():
 class VocableStrawboss():
     def __init__(self, json_file ):
         """
-        word vocab ID generator
+        word vocab ID generator for given JSON file
         """
         # self.lang = lang
         with open(json_file, 'r', encoding = "utf-8") as f:
@@ -157,6 +138,10 @@ class VocableStrawboss():
 
 
 class VocabSanitizer():
+    '''
+    Sanitize topK vocab prediction using ancillary vocab list
+    by reranking or removing etc
+    '''
     def __init__(self, data_file):
         '''
         data_file: path to file conatining vocabulary list

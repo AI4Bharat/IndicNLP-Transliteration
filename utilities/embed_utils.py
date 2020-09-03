@@ -7,6 +7,9 @@ def create_annoy_index_from_hdf5(lang,
                                 voc_json_file, hdf5_file,
                                 vec_sz =300,
                                 save_prefix= None):
+        '''
+        Given a HDF5 filecontaing embeddings create Annoy indexing
+        '''
         print("Creating Annoy tree object")
         words = json.load(open(voc_json_file, encoding="utf-8"))
 
@@ -27,6 +30,9 @@ def create_annoy_index_from_model(voc_json_file, glyph_obj,
                                 model_func,
                                 vec_sz = 300,
                                 save_prefix = None):
+        '''
+        Given an Embed generating LM, create Annoy index for given words
+        '''
         print("Creating Annoy tree object")
         words = json.load(open(voc_json_file, encoding="utf-8"))
 

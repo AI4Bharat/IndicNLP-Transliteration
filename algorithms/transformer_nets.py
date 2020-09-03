@@ -65,6 +65,9 @@ class XFMR_Seq2Seq(nn.Module):
 ##------------------------------------------------------------------------------
 
 class XFMR_Neophyte(nn.Module):
+    '''
+    Basic Encoder stage alone sequence to sequence model
+    '''
     def __init__(self, input_vcb_sz, output_vcb_sz,
                     emb_dim, n_layers,
                     attention_head = 8, feedfwd_dim = 1024,
@@ -185,6 +188,9 @@ class PositionalEncoding(nn.Module):
 
 
 class XFMR_CorrectorNet(nn.Module):
+    '''
+    correctornet waffer based on XFMR
+    '''
     def __init__(self, input_vcb_sz, output_vcb_sz,
                     char_embed_dim, n_layers,
                     attention_head = 8, feedfwd_dim = 1024,

@@ -34,6 +34,7 @@ acc_grad = 1
 learning_rate = 1e-3
 teacher_forcing, teach_force_till, teach_decay_pereph = 1, 10, 0
 
+## Merge JSON into a single file
 # train_file = merge_xlit_jsons(["data/hindi/HiEn_train1.json",
 #                                 "data/hindi/HiEn_train2.json" ],
 #                                 save_prefix= LOG_PATH)
@@ -42,6 +43,7 @@ train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
                         json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
                         padding=True)
 
+## Charset training for predicting next char
 # train_dataset = MonoCharLMData(glyph_obj = tgt_glyph,
 #                     data_file = "data/konkani/gom_all_words_sorted.json",
 #                     input_type = 'plain',
@@ -93,7 +95,7 @@ dec = Decoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 dropout= m_dropout,
                 use_attention = attention,
                 enc_outstate_dim= enc_outstate_dim,
-                for_deep_fusion= for_deep_fusion,
+                for_deep_fusion= for_deep_fusion, # <<< Check
                 device = device,)
 
 
@@ -127,7 +129,7 @@ m_dropout = 0
 lm_dec = LMDecoder(  output_dim= output_dim, embed_dim = dec_emb_dim,
                 hidden_dim= dec_hidden_dim,
                 rnn_type = rnn_type, layers= dec_layers,
-                for_deep_fusion = for_deep_fusion,
+                for_deep_fusion = for_deep_fusion, # <<< Check
                 dropout= m_dropout,
                 device = device,)
 
@@ -142,15 +144,15 @@ model = Seq2SeqLMFusion(
                 decoder = dec,
                 pass_enc2dec_hid=enc2dec_hid,
                 lm_decoder = lm_dec,
-                for_deep_fusion = for_deep_fusion,
+                for_deep_fusion = for_deep_fusion, # <<< Check
                 dropout = 0, device = device)
 
 model = model.to(device)
 
 model.fusion_initial_weight_loader(basewgt_path ='hypotheses/Training_gom_121/Training_gom_121_base/weights/Training_gom_121_base_model.pth' ,
                     lmwgt_path='hypotheses/Training_gom_121/Training_gom_121_lm/weights/Training_gom_121_lm_lmnet_model.pth' ,)
+## freeze LM for training
 model.lm_decoder = rutl.freeze_params(model.lm_decoder)
-
 model_func = model.deep_fuse_forward
 
 ##------ Model Details ---------------------------------------------------------

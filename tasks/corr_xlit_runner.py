@@ -1,4 +1,4 @@
-''' RNN Seq2Seq (Encoder-Decoder) training setup
+''' Vocab level multinominal prediction based on invidual characters training setup
 '''
 
 import torch
@@ -88,7 +88,6 @@ corr_model = corr_model.to(device)
 hi_emb_vecs = np.load("data/embeds/fasttext/hi_99_char_512_fasttext.npy")
 corr_model.embedding.weight.data.copy_(torch.from_numpy(hi_emb_vecs))
 
-
 # corr_model = rutl.load_pretrained(corr_model,pretrain_wgt_path) #if path empty returns unmodified
 
 ##--------- Model Details ------------------------------------------------------
@@ -104,7 +103,6 @@ def loss_estimator(pred, truth):
     """
     """
     loss_ = criterion(pred, truth)
-
     return torch.mean(loss_)
 
 
