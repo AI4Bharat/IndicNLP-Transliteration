@@ -36,7 +36,32 @@ def create_word_embedding_hdf5():
 
 ## -----
 
-devanagari_list = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', 'ऎ', 'ए', 'ऐ',
+def character_embed_to_pickle(charset):
+    ftxt_model = fasttext.load_model("cc.hi.300.bin")
+    emb_dict = dict()
+    for c in charset:
+        emb_dict[c] = ftxt_model[c]
+
+    with open("Gom_char_embed_dict.pkl", 'wb') as f:
+        pickle.dump(emb_dict,f)
+
+
+def character_embed_to_numpy(charset):
+    emb_arr = np.random.uniform(size = (len(charset), 300))
+
+    ftxt_model = fasttext.load_model("cc.hi.300.bin")
+    for i, c in enumerate(charset):
+        arr = ftxt_model[c]
+        arr = np.reshape(arr, (1,300))
+        emb_arr[i, :] = arr[0]
+
+    print(emb_arr)
+    np.save("Hi_99_char_300_ftxt", emb_arr)
+
+
+special = ['_','$','#','*',"'",'%','!']
+
+devanagari_chars = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', 'ऎ', 'ए', 'ऐ',
     'ऑ', 'ऒ', 'ओ', 'औ','ऋ','ॠ','ऌ','ॡ','ॲ', 'ॐ',
     'क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 'ठ', 'ड', 'ढ', 'ण',
     'त', 'थ', 'द', 'ध', 'न', 'ऩ', 'प', 'फ', 'ब', 'भ', 'म', 'य', 'र', 'ऱ', 'ल',
@@ -47,16 +72,8 @@ devanagari_list = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', 'ऎ',
     chr(0x200d), # ZeroWidthJoiner U+200d
 ]
 
-def character_embeddings(charset):
-    ftxt_model = fasttext.load_model("cc.hi.300.bin")
-    emb_dict = dict()
-    for c in charset:
-        emb_dict[c] = ftxt_model[c]
-    return emb_dict
 
 if __name__ == "__main__":
-    emb_dict = character_embeddings(devanagari_list)
+    character_embed_to_numpy( special+devanagari_chars )
 
-    ## save as pickle
-    with open("Gom_char_embed_dict.pkl", 'wb') as f:
-        pickle.dump(emb_dict,f)
+
