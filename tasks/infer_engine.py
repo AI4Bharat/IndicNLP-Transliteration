@@ -12,7 +12,7 @@ result = voc_sanitize.reposition(result)
 
 hi_glyph = lutl.GlyphStrawboss("hi")
 en_glyph = lutl.GlyphStrawboss("en")
-# voc_sanitize = lutl.VocabSanitizer("data/hindi/mono/hi_words_sorted.json")
+voc_sanitize = lutl.VocabSanitizer("data/hindi/mono/hi_words_sorted.json")
 
 device = "cpu"
 
