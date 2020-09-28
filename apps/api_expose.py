@@ -35,7 +35,7 @@ os.makedirs('logs/', exist_ok=True)
 USER_CHOICES_LOGS = 'logs/user_choices.csv'
 
 # Write CSV header
-USER_DATA_FIELDS = ['user_ip', 'timestamp', 'input', 'lang', 'output', 'topk_index']
+USER_DATA_FIELDS = ['user_ip', 'user_id', 'timestamp', 'input', 'lang', 'output', 'topk_index']
 if not os.path.isfile(USER_CHOICES_LOGS):
     with open(USER_CHOICES_LOGS, 'w', buffering=1) as f:
         writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
@@ -59,7 +59,7 @@ def supported_languages():
             "Identifier": code,
             "DisplayName": name,
             "Author": "AI4Bharat",
-            "CompiledDate": "5-Aug-2020",
+            "CompiledDate": "28-September-2020",
             "IsStable": True
         })
     # TODO: Save this variable permanently, as it will be constant
@@ -113,10 +113,18 @@ def reverse_xlit_api(lang_code, word):
 def learn_from_user():
     data = request.get_json(force=True)
     data['user_ip'] = request.remote_addr
+    data['user_id'] = None
     data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
     write_userdata(data)
-    return jsonify({'status': 'Thanks bro'})
+    return jsonify({'status': 'Success'})
 
+@app.route('/learn_context', methods=['POST'])
+def learn_from_context():
+    data = request.get_json(force=True)
+    data['user_ip'] = request.remote_addr
+    data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
+    write_userdata(data)
+    return jsonify({'status': 'Success'})
 
 
 ## ----------------------------- Xlit Engine -------------------------------- ##
