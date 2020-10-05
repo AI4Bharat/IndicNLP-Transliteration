@@ -14,6 +14,10 @@ Most languages in India do not have digital presence due to an underdeveloped ec
   </tr>
 </table>
 
-# Contact us
+# Reporting
 
 For issues or clarification, please [raise an issue on GitHub here](https://github.com/AI4Bharat/IndianNLP-Transliteration/issues).
+
+# Contact
+
+email: opensource@ai4bharat.org

@@ -5,8 +5,16 @@
   * [Correction Network](how-it-works/correction-net)
   * [Other Experiments](how-it-works/experiments)
 
-* [Code and models](code)
+* [Technical Details](code/index)
+  * [Datasets](code/datasets)
+  * [Training](code/training)
+  * [Pre-trained Models](code/checkpoints)
+  * [Inference](code/inference)
 
 * [Server and UI](server)
+  * [💻 Demo Website](http://transliterate.ai4bharat.org/)
+
+* [Publications](publications)
+* [Future Works](future)
 
 * [About & Contact](about)
