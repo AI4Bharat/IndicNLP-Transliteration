@@ -1,1 +1,5 @@
-Encoder->Attention->Decoder
+![Encoder-Decoder](images/Encoder-Decoder.png)
+
+
+# Encoder
+

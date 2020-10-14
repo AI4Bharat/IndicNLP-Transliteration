@@ -1,20 +1,18 @@
-* [HOME](/)
-
-* [How It Works?](how-it-works/index)
-  * [Encoder Decoder](how-it-works/encoder-decoder)
-  * [Correction Network](how-it-works/correction-net)
-  * [Other Experiments](how-it-works/experiments)
-
-* [Technical Details](code/index)
-  * [Datasets](code/datasets)
-  * [Training](code/training)
-  * [Pre-trained Models](code/checkpoints)
-  * [Inference](code/inference)
+* [Mission Statement](why-do-it/mission-statement)
+* [Problem Statement](why-do-it/problem-statement)
 
 * [Server and UI](server)
   * [💻 Demo Website](http://transliterate.ai4bharat.org/)
 
+* [Resources](resources)
+
+* How It Works
+  * [Seq-2-Seq model](how-it-works/seq2seq)
+  * [Correction Network](how-it-works/correction-net)
+  * [Other Experiments](how-it-works/experiments)
+
+
 * [Publications](publications)
-* [Future Works](future)
+* [Future Works](contributing)
 
 * [About & Contact](about)
