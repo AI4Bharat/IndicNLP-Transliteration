@@ -1,10 +1,11 @@
-# About
+# **About**
 
-The main goal of this project is to create open source input tools for under-represented languages in India. It started as part of
-[**Google's AI for Social Good**](https://india.googleblog.com/2020/02/applying-ai-to-big-problemssix-research.html) initiative, in collaboration with [**Story Weaver**](https://storyweaver.org.in/about) a non-profit working towards  foundational literary education for children, inorder to create better tools for content creation.
+Indian transliteration by AI4Bharat started in collaboration with [**Story Weaver**](https://storyweaver.org.in/about) a non-profit working towards  foundational literary education for children, supported by
+[**Google's AI for Social Good**](https://india.googleblog.com/2020/02/applying-ai-to-big-problemssix-research.html) initiative, inorder to create better tools for content creation.
 
+---
 
-# Members
+# Maintainers
 
 <table>
   <tr>
@@ -13,7 +14,7 @@ The main goal of this project is to create open source input tools for under-rep
   </tr>
 </table>
 
-# Reporting
+## Reporting
 
 For issues or clarification, please [raise an issue on GitHub here](https://github.com/AI4Bharat/IndianNLP-Transliteration/issues).
 

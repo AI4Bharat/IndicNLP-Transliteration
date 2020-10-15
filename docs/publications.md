@@ -1,4 +1,4 @@
 # Media
 
-- https://india.googleblog.com/2020/02/applying-ai-to-big-problemssix-research.html
-- https://economictimes.indiatimes.com/industry/services/education/iit-madras-on-board-google-wagon-driving-ai-for-social-good/articleshow/74177032.cms
+- [Applying AI to big problems––six research projects we’re supporting in public health, education, disaster prevention, and conservation](https://india.googleblog.com/2020/02/applying-ai-to-big-problemssix-research.html)
+

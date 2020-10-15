@@ -1,18 +1,16 @@
-* [Mission Statement](why-do-it/mission-statement)
-* [Problem Statement](why-do-it/problem-statement)
+* [Mission Statement](mission-statement)
 
-* [Server and UI](server)
-  * [💻 Demo Website](http://transliterate.ai4bharat.org/)
+* [Usage](usage)
+  * [💻 Xlit Website](http://transliterate.ai4bharat.org/)
 
-* [Resources](resources)
+* [Datasets & Models](resources)
 
 * How It Works
-  * [Seq-2-Seq model](how-it-works/seq2seq)
-  * [Correction Network](how-it-works/correction-net)
-  * [Other Experiments](how-it-works/experiments)
+  * [Architecture](how-it-works/architecture)
+  * [Other Approaches](how-it-works/experiments)
 
 
 * [Publications](publications)
-* [Future Works](contributing)
+* [Contributing](contributing)
 
 * [About & Contact](about)
