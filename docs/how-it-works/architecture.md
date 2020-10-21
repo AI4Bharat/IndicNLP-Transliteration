@@ -1,9 +1,8 @@
-![Encoder-Decoder](../images/Encoder-Decoder.png)
-
-
 # Architecture
 
 The architecture is based on the Sequence-to-Sequence models constructed with Recurrent neural networks, with encoder-decoder setup, where each character of the word corresponds to time. <br>
+
+![Encoder-Decoder](../images/encoder_decoder.png)
 
 **Encoder**
 
