@@ -33,15 +33,16 @@ devanagari_scripts = ['ऄ', 'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ','ऍ', '�
 ## ------------ Glyph handlers -------------------------------------------------
 
 class GlyphStrawboss():
-    def __init__(self, lang = 'en'):
+    def __init__(self, glyphs = 'en'):
         """ list of letters in a language in unicode
         lang: ISO Language code
         """
-        self.lang = lang
-        if lang == 'en':
+        if glyphs == 'en':
             self.glyphs = english_smallcase
-        elif lang in ['hi', 'gom', 'mai']:
-            self.glyphs = devanagari_scripts
+        elif isinstance(glyphs, list):
+            self.glyphs = glyphs
+        else:
+            raise "pass target characters as list object"
 
         self.char2idx = {}
         self.idx2char = {}

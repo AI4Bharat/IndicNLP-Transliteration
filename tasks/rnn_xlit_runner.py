@@ -6,12 +6,15 @@ from torch.utils.data import DataLoader
 import numpy as np
 import os
 import sys
+import json
 from tqdm import tqdm
 import utilities.running_utils as rutl
 from utilities.lang_data_utils import XlitData, GlyphStrawboss, merge_xlit_jsons
 from utilities.logging_utils import LOG2CSV
 from algorithms.recurrent_nets import Encoder, Decoder, Seq2Seq
 
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
 
 ##===== Init Setup =============================================================
 MODE = rutl.RunMode.train
@@ -26,8 +29,10 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================
 
+scripts = json.load(open("data/hindi/hi_scripts.json"))
+tgt_glyph = GlyphStrawboss(glyphs = scripts["glyphs"])
+
 src_glyph = GlyphStrawboss("en")
-tgt_glyph = GlyphStrawboss("hi")
 
 num_epochs = 1000
 batch_size = 3
@@ -41,14 +46,14 @@ pretrain_wgt_path = None
 #                                 save_prefix= LOG_PATH)
 
 train_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/konkani/GomEn_ann1_train.json', file_map = "LangEn",
+                        json_file='data/hindi/HiEn_xlit_train.json', file_map = "LangEn",
                         padding=True)
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size,
                                 shuffle=True, num_workers=0)
 
 val_dataset = XlitData( src_glyph_obj = src_glyph, tgt_glyph_obj = tgt_glyph,
-                        json_file='data/konkani/GomEn_ann1_valid.json', file_map = "LangEn",
+                        json_file='data/hindi/HiEn_xlit_valid.json', file_map = "LangEn",
                         padding=True)
 
 

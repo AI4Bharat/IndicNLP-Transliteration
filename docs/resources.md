@@ -1,5 +1,5 @@
 # Dataset
-Datasets were annotated with the help of native language users of [Story Weaver](https://storyweaver.org.in/).
+Datasets were annotated with the help of native language users by [Story Weaver](https://storyweaver.org.in/).
 
 Xlit - Transliteration Dataset by [Story Weaver](https://storyweaver.org.in/) & [AI4Bharat](https://ai4bharat.org/) is licensed under a [Creative Commons Attribution 4.0 International License][cc-by].
 
