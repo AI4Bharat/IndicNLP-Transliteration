@@ -36,13 +36,13 @@ class GlyphStrawboss():
     def __init__(self, glyphs = 'en'):
         """ list of letters in a language in unicode
         lang: ISO Language code
+        glyphs: json file with script information
         """
         if glyphs == 'en':
             self.glyphs = english_smallcase
-        elif isinstance(glyphs, list):
-            self.glyphs = glyphs
         else:
-            raise "pass target characters as list object"
+            glyph_data = json.load(open(glyphs))
+            self.glyphs = glyph_data["glyphs"]
 
         self.char2idx = {}
         self.idx2char = {}

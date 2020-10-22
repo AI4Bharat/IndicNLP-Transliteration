@@ -29,9 +29,8 @@ if not os.path.exists(LOG_PATH+"weights"): os.makedirs(LOG_PATH+"weights")
 
 ##===== Running Configuration =================================================
 
-scripts = json.load(open("data/hindi/hi_scripts.json"))
-tgt_glyph = GlyphStrawboss(glyphs = scripts["glyphs"])
 
+tgt_glyph = GlyphStrawboss(glyphs = "data/hindi/hi_scripts.json")
 src_glyph = GlyphStrawboss("en")
 
 num_epochs = 1000

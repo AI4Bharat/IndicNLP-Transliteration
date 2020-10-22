@@ -5,7 +5,7 @@ Xlit - Transliteration Dataset by [Story Weaver](https://storyweaver.org.in/) & 
 
 [![CC BY 4.0][cc-by-image]][cc-by]
 
-| Language      | ISO 639-3 | Lexicon <br>Count | Download                                                                                                        | About                                                   |
+| Language      | ISO Code | Lexicon <br>Count | Download                                                                                                        | About                                                   |
 |---------------|-----------|-------------------|-----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
 | Hindi         | hi        | 32508             | [Link](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/download/DATA/Hindi_Xlit_dataset.zip)    | [Wiki](https://en.wikipedia.org/wiki/Hindi)             |
 | Konkani(Goan) | gom       | 28886             | [Link](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/download/DATA/Konkani_Xlit_dataset.zip)  | [Wiki](https://en.wikipedia.org/wiki/Konkani_language)  |

@@ -10,7 +10,8 @@ voc_sanitize = lutl.VocabSanitizer("data/X_word_list.json")
 result = voc_sanitize.reposition(result)
 '''
 
-hi_glyph = lutl.GlyphStrawboss("hi")
+
+tgt_glyph = lutl.GlyphStrawboss(glyphs = "data/hindi/hi_scripts.json")
 en_glyph = lutl.GlyphStrawboss("en")
 voc_sanitize = lutl.VocabSanitizer("data/hindi/mono/hi_words_sorted.json")
 
@@ -19,9 +20,11 @@ device = "cpu"
 ##=============== Models =======================================================
 
 from tasks.rnn_xlit_runner import model
-weight_path = "hypotheses/Training_hi_110/weights/Training_hi_110_model.pth"
 
+weight_path = "hypotheses/Training_hi_110/weights/Training_hi_110_model.pth"
 weights = torch.load( weight_path, map_location=torch.device(device))
+
+model.to(device)
 model.load_state_dict(weights)
 model.eval()
 
@@ -30,10 +33,10 @@ def inferencer(word, topk = 5):
     in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
     ## change to active or passive beam
     p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
-    p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
+    p_result = [ tgt_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
 
     result = voc_sanitize.reposition(p_result)
-    result = p_result
+
     return result
 
 
