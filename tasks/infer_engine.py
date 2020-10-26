@@ -35,9 +35,9 @@ def inferencer(word, topk = 5):
     p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
     p_result = [ tgt_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
 
-    result = voc_sanitize.reposition(p_result)
+    r_result = voc_sanitize.reposition(p_result)
 
-    return result
+    return p_result, r_result
 
 
 ##=============== Corr/ Emb Stacked

@@ -66,10 +66,11 @@ def merge_pred_truth_json(pred_path, truth_path ):
 
 def inference_looper(in_words, topk = 3):
     from tasks.infer_engine import inferencer
-    out_dict = {}
+    p_dict = {}
+    r_dict = {}
     for i in tqdm(in_words):
-        out_dict[i] = inferencer(i, topk=topk)
-    return out_dict
+        p_dict[i], r_dict[i]  = inferencer(i, topk=topk)
+    return p_dict, r_dict
 
 def vocab_sanity_runner(pred_json, voc_json):
     '''
@@ -111,28 +112,35 @@ SAVE_DIR = "hypotheses/training_Test/acc_log"
 if not os.path.exists(SAVE_DIR): os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
-
+    '''
+    Modified to simultaneously report on Plain and Reranked results
+    '''
     for fi in files:
         tfi =  toggle_json(fi, save_prefix=SAVE_DIR)
         words = get_from_json(tfi, "key")
-        out_dict = inference_looper(words, topk = 10)
+        p_dict, r_dict = inference_looper(words, topk = 10)
 
         ## Testing with LM adjustments
         # out_dict = vocab_sanity_runner( "hypotheses/training_knk_103/acc_log/pred_EnKnk_ann1_test.json",
             # "data/konkani/gom_word_list.json")
 
         pred_path = os.path.join(SAVE_DIR, "pred_"+os.path.basename(fi) )
-        save_to_json(pred_path, out_dict)
+        save_to_json(pred_path, p_dict)
+        repos_path = os.path.join(SAVE_DIR, "repos_"+os.path.basename(fi) )
+        save_to_json(repos_path, r_dict)
 
         gt_json = tfi
-        pred_json = pred_path
-        save_prefix = os.path.join(SAVE_DIR, os.path.basename(fi).replace(".json", ""))
 
-        for topk in [10, 5, 3, 2, 1]:
-            ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
-            run_accuracy_news = "( echo {} && python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv ) | tee -a {}/Summary.txt".format(
-                            os.path.basename(fi),
-                            gt_json, pred_json, topk,
-                            save_prefix, topk, SAVE_DIR )
+        for path in (pred_path, repos_path):
+            pred_json = path
+            save_prefix = os.path.join(SAVE_DIR, os.path.basename(path).replace(".json", ""))
 
-            os.system(run_accuracy_news)
+            for topk in [10, 5, 3, 2, 1]:
+                ## GT json file passed to below script must be in { En(input): [NativeLang (predict)] } format
+                run_accuracy_news = "( echo {} && python tools/accuracy_reporter/accuracy_news.py --gt-json {} --pred-json {} --topk {} --save-output-csv {}_top{}-scores.csv ) | tee -a {}/Summary.txt".format(
+                                os.path.basename(fi),
+                                gt_json, pred_json, topk,
+                                save_prefix, topk, SAVE_DIR )
+
+                os.system(run_accuracy_news)
+
