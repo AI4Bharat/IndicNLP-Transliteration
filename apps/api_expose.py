@@ -5,7 +5,8 @@ USAGE:
     1. $ sudo env PATH=$PATH python3 api_expose.py
     2. Run in browser: http://localhost:8000/tl/gom/a
 """
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
+from uuid import uuid4
 from datetime import datetime
 import traceback
 import os
@@ -59,11 +60,17 @@ def supported_languages():
             "Identifier": code,
             "DisplayName": name,
             "Author": "AI4Bharat",
-            "CompiledDate": "28-September-2020",
+            "CompiledDate": "23-June-2020",
             "IsStable": True
         })
     # TODO: Save this variable permanently, as it will be constant
-    return jsonify(langs)
+
+    response = make_response(jsonify(langs))
+    if 'xlit_user_id' not in request.cookies:
+        # host = request.environ['HTTP_ORIGIN'].split('://')[1]
+        host = '.ai4bharat.org'
+        response.set_cookie('xlit_user_id', uuid4().hex, max_age=365*24*60*60, domain=host, samesite='None', secure=True, httponly=True)
+    return response
 
 @app.route('/tl/<lang_code>/<eng_word>', methods = ['GET', 'POST'])
 def xlit_api(lang_code, eng_word):
@@ -72,7 +79,7 @@ def xlit_api(lang_code, eng_word):
         'success': False,
         'error': '',
         'at': str(datetime.utcnow()) + ' +0000 UTC',
-        'input': eng_word,
+        'input': eng_word.strip(),
         'result': ''
     }
 
@@ -113,7 +120,8 @@ def reverse_xlit_api(lang_code, word):
 def learn_from_user():
     data = request.get_json(force=True)
     data['user_ip'] = request.remote_addr
-    data['user_id'] = None
+    if 'user_id' not in data:
+        data['user_id'] = request.cookies['xlit_user_id'] if 'xlit_user_id' in request.cookies else None
     data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
     write_userdata(data)
     return jsonify({'status': 'Success'})
@@ -191,7 +199,7 @@ if __name__ == '__main__':
     engine = XlitEngine()
     if not DEBUG: # Production Server
         from flask_cors import CORS, cross_origin
-        cors = CORS(app, resources={r"/*": {"origins": "*"}})
+        cors = CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
         # app.run(host='0.0.0.0', port=443, ssl_context=SSL_FILES)
 
         from gevent.pywsgi import WSGIServer
