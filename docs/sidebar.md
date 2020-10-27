@@ -1,7 +1,7 @@
 * [Mission Statement](mission-statement)
 
 * [Usage](usage)
-  * [💻 Xlit Website](http://transliterate.ai4bharat.org/)
+  * [💻 Xlit Website](http://xlit.ai4bharat.org/)
 
 * [Datasets & Models](resources)
 
