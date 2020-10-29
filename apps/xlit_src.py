@@ -5,9 +5,16 @@ import random
 import sys
 import os
 import json
-from annoy import AnnoyIndex
+import enum
 
 F_DIR = os.path.dirname(os.path.realpath(__file__))
+
+class XlitError(enum.Enum):
+    lang_err = "Unsupported langauge ID requested ;( Please check available languages."
+    string_err = "String passed is incompatable ;("
+    internal_err = "Internal crash ;("
+    unknown_err = "Unknown Failure"
+    loading_err = "Loading failed ;( Check if metadata/paths are correctly configured."
 
 ##=================== Network ==================================================
 
@@ -437,19 +444,22 @@ class VocabSanitizer():
 
 ##=============== INSTANTIATION ================================================
 
-class XlitCrankshaft():
+class XlitPiston():
     """
+    For handling prediction & post-processing of transliteration for a single language
+
     Class dependency: Seq2Seq, GlyphStrawboss, VocabSanitizer
     Global Variables: F_DIR
     """
-    def __init__(self):
+    def __init__(self, weight_path, vocab_file, tglyph_cfg_file,
+                        iglyph_cfg_file = "en", device = "cpu" ):
 
-        self.device = "cpu"
-        self.in_glyph_obj = GlyphStrawboss("en")
-        self.tgt_glyph_obj = GlyphStrawboss(glyphs = F_DIR+"/models/tamil/ta_scripts.json")
-        self.voc_sanity = VocabSanitizer(F_DIR+"/models/tamil/ta_words_a4b.json")
+        self.device = device
+        self.in_glyph_obj = GlyphStrawboss(iglyph_cfg_file)
+        self.tgt_glyph_obj = GlyphStrawboss(glyphs = tglyph_cfg_file)
+        self.voc_sanity = VocabSanitizer(vocab_file)
 
-        self._numsym_set = set("1234567890.")
+        self._numsym_set = set(json.load(open(tglyph_cfg_file))["numsym_map"].keys() )
         self._inchar_set = set("abcdefghijklmnopqrstuvwxyz")
         self._natscr_set = set().union(self.tgt_glyph_obj.glyphs,
                             sum(self.tgt_glyph_obj.numsym_map.values(),[]) )
@@ -485,15 +495,15 @@ class XlitCrankshaft():
                         device = self.device,)
         self.model = Seq2Seq(enc, dec, pass_enc2dec_hid=enc2dec_hid, device=self.device)
         self.model = self.model.to(self.device)
-        weights = torch.load( F_DIR+"/models/tamil/ta_101_model.pth", map_location=torch.device(self.device))
+        weights = torch.load( weight_path, map_location=torch.device(self.device))
 
         self.model.load_state_dict(weights)
         self.model.eval()
 
-    def character_model(self, word, topk = 10):
+    def character_model(self, word, beam_width = 1):
         in_vec = torch.from_numpy(self.in_glyph_obj.word2xlitvec(word)).to(self.device)
         ## change to active or passive beam
-        p_out_list = self.model.active_beam_inference(in_vec, beam_width = topk)
+        p_out_list = self.model.active_beam_inference(in_vec, beam_width = beam_width)
         p_result = [ self.tgt_glyph_obj.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
 
         result = self.voc_sanity.reposition(p_result)
@@ -544,7 +554,7 @@ class XlitCrankshaft():
 
         return segment
 
-    def inferencer(self, sequence):
+    def inferencer(self, sequence, beam_width = 10):
 
         seg = self._word_segementer(sequence[:120])
         lit_seg = []
@@ -559,7 +569,7 @@ class XlitCrankshaft():
 
             if model_flag:
                 if seg[p][0] in self._inchar_set:
-                    lit_seg.append(self.character_model(seg[p]))
+                    lit_seg.append(self.character_model(seg[p], beam_width=beam_width))
                     p+=1; model_flag = False
                 else: # num & punc
                     lit_seg.append(self.numsym_model(seg[p]))
@@ -577,7 +587,127 @@ class XlitCrankshaft():
 
         return final_result
 
+from collections.abc import Iterable
+class XlitEngine():
+    """
+    For Managing the top level tasks and applications of transliteration
+
+    Global Variables: F_DIR
+    """
+    def __init__(self, lang2use = "all", config_path = "models/lineup.json"):
+
+        lineup = json.load( open(os.path.join(F_DIR, config_path)) )
+        if isinstance(lang2use, str):
+            if lang2use == "all":
+                self.lang_config = lineup
+            elif lang2use in lineup:
+                self.lang_config[lang2use] = lineup[lang2use]
+            else:
+                raise "The entered Langauge code not found. Available are {}".format(lineup.keys())
+
+        elif isinstance(lang2use, Iterable):
+                for l in lang2use:
+                    try:
+                        self.lang_config[l] = lineup[l]
+                    except:
+                        print("Language code {} not found, Skipping...".format(l))
+        else:
+            raise "lang2use must be a list of language codes (or) string of single language code"
+
+        self.langs = {}
+        self.lang_model = {}
+        for la in self.lang_config:
+            try:
+                print("Loading {}...".format(la) )
+                self.lang_model[la] = XlitPiston(
+                    weight_path = os.path.join(F_DIR, "models",
+                                    self.lang_config[la]["weight"]) ,
+                    vocab_file = os.path.join(F_DIR, "models",
+                                    self.lang_config[la]["vocab"]),
+                    tglyph_cfg_file = os.path.join(F_DIR, "models",
+                                    self.lang_config[la]["script"]),
+                    iglyph_cfg_file = "en",
+                )
+                self.langs[la] = self.lang_config[la]["name"]
+            except Exception as error:
+                print("Failure in loading {} \n".format(la), error)
+                print(XlitError.loading_err.value)
+
+
+    def translit_word(self, eng_word, lang_code = "default", topk = 7, beam_width = 10):
+        if eng_word == "":
+            return []
+
+        if (lang_code in self.langs):
+            try:
+                res_list = self.lang_model[lang_code].inferencer(eng_word, beam_width = 10)
+                return res_list[topk]
+
+            except Exception as error:
+                print("Error:", error)
+                print(XlitError.internal_err.value)
+                return XlitError.internal_err
+
+        elif lang_code == "default":
+            try:
+                res_dict = {}
+                for la in self.lang_model:
+                    res = self.lang_model[la].inferencer(eng_word, beam_width = 10)
+                    res_dict[la] = res[topk]
+                return res_dict
+
+            except Exception as error:
+                print("Error:", error)
+                print(XlitError.internal_err.value)
+                return XlitError.internal_err
+
+        else:
+            print("Unknown Langauge requested", lang_code)
+            print(XlitError.lang_err.value)
+            return XlitError.lang_err
+
+
+    def translit_sentence(self, eng_sentence, lang_code = "default", beam_width = 10):
+        if eng_sentence == "":
+            return []
+
+        if (lang_code in self.langs):
+            try:
+                out_str = ""
+                for word in eng_sentence.split():
+                    res_ = self.lang_model[lang_code].inferencer(word, beam_width = 10)
+                    out_str = out_str + res_[0] + " "
+                return out_str[:-1]
+
+            except Exception as error:
+                print("Error:", error)
+                print(XlitError.internal_err.value)
+                return XlitError.internal_err
+
+        elif lang_code == "default":
+            try:
+                res_dict = {}
+                for la in self.lang_model:
+                    out_str = ""
+                    for word in eng_sentence.split():
+                        res_ = self.lang_model[la].inferencer(word, beam_width = 10)
+                        out_str = out_str + res_[0] + " "
+                    res_dict[la] = out_str[:-1]
+                return res_dict
+
+            except Exception as error:
+                print("Error:", error)
+                print(XlitError.internal_err.value)
+                return XlitError.internal_err
+
+        else:
+            print("Unknown Langauge requested", lang_code)
+            print(XlitError.lang_err.value)
+            return XlitError.lang_err
+
+
 if __name__ == "__main__":
 
-    handle = XlitCrankshaft()
-    print(handle.inferencer("123"))
+    engine = XlitEngine()
+    y = engine.translit_sentence("Hello World !")
+    print(y)

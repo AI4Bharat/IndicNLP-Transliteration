@@ -39,10 +39,11 @@ class GlyphStrawboss():
         glyphs: json file with script information
         """
         if glyphs == 'en':
-            self.glyphs = english_smallcase
+            self.glyphs = [chr(alpha) for alpha in range(97, 122+1)]
         else:
-            glyph_data = json.load(open(glyphs))
-            self.glyphs = glyph_data["glyphs"]
+            self.dossier = json.load(open(glyphs))
+            self.glyphs = self.dossier["glyphs"]
+            self.numsym_map = self.dossier["numsym_map"]
 
         self.char2idx = {}
         self.idx2char = {}

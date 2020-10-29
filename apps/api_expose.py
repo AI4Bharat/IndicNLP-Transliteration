@@ -15,10 +15,12 @@ import enum
 import csv
 
 class XlitError(enum.Enum):
-    lang_err = "Unsupported langauge ID requested"
-    string_err = "String passed is incompatable"
+    lang_err = "Unsupported langauge ID requested ;( Please check available languages."
+    string_err = "String passed is incompatable ;("
     internal_err = "Internal crash ;("
     unknown_err = "Unknown Failure"
+    loading_err = "Loading failed ;( Check if metadata/paths are correctly configured."
+
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
@@ -88,7 +90,7 @@ def xlit_api(lang_code, eng_word):
         return jsonify(response)
 
     try:
-        xlit_result = engine.transliterate(lang_code, eng_word)
+        xlit_result = engine.translit_word(eng_word, lang_code)
     except Exception as e:
         xlit_result = XlitError.internal_err
 
@@ -126,64 +128,6 @@ def learn_from_user():
     write_userdata(data)
     return jsonify({'status': 'Success'})
 
-@app.route('/learn_context', methods=['POST'])
-def learn_from_context():
-    data = request.get_json(force=True)
-    data['user_ip'] = request.remote_addr
-    data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
-    write_userdata(data)
-    return jsonify({'status': 'Success'})
-
-
-## ----------------------------- Xlit Engine -------------------------------- ##
-
-BASEPATH = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(BASEPATH)
-
-class XlitEngine():
-    def __init__(self):
-        self.langs = {"hi": "Hindi", "gom": "Konkani (Goan)", "mai": "Maithili"}
-
-        try:
-            from models.hindi.hi_program110 import inference_engine as hindi_engine
-            self.hindi_engine = hindi_engine
-        except Exception as error:
-            print("Failure in loading Hindi \n", error)
-            del self.langs['hi']
-
-        try:
-            from models.konkani.gom_program116 import inference_engine as konkani_engine
-            self.konkani_engine = konkani_engine
-        except Exception as error:
-            print("Failure in loading Konkani \n", error)
-            del self.langs['gom']
-
-        try:
-            from models.maithili.mai_program120 import inference_engine as maithili_engine
-            self.maithili_engine = maithili_engine
-        except Exception as error:
-            print("Failure in loading Maithili \n", error)
-            del self.langs['mai']
-
-    def transliterate(self, lang_code, eng_word):
-        if eng_word == "":
-            return []
-
-        if lang_code not in self.langs:
-            print("Unknown Langauge requested", lang_code)
-            return XlitError.lang_err
-
-        try:
-            if lang_code == "hi":
-                return self.hindi_engine(eng_word)
-            elif lang_code == "gom":
-                return self.konkani_engine(eng_word)
-            elif lang_code == "mai":
-                return self.maithili_engine(eng_word)
-
-        except error as Exception:
-            print("Error:", error)
-            return XlitError.unknown_err
 
 
 ## -------------------------- Server Setup ---------------------------------- ##
@@ -194,6 +138,17 @@ def host_https():
     print('Starting HTTPS Server...')
     https_server.serve_forever()
     return
+
+
+
+## ----------------------------- Xlit Engine -------------------------------- ##
+
+BASEPATH = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(BASEPATH)
+from xlit_src import XlitEngine
+
+
+## -------------------------------------------------------------------------- ##
 
 if __name__ == '__main__':
     engine = XlitEngine()
