@@ -6,6 +6,7 @@ import sys
 import os
 import json
 import enum
+import traceback
 
 F_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -559,31 +560,46 @@ class XlitPiston():
         seg = self._word_segementer(sequence[:120])
         lit_seg = []
 
-        # TODO: Fix logic to accomodate up to 5 segments rather than 1st one
-        p = 0; model_flag = True
-        seg_len = len(seg[:3])
-        while p < seg_len:
-            if seg[p][0] in self._natscr_set:
-                lit_seg.append([seg[p]])
-                p+=1; continue
+        p = 0
+        while p < len(seg):
+            # if p < 3:
+                if seg[p][0] in self._natscr_set:
+                    lit_seg.append([seg[p]])
+                    p+=1
 
-            if model_flag:
-                if seg[p][0] in self._inchar_set:
+                elif seg[p][0] in self._inchar_set:
                     lit_seg.append(self.character_model(seg[p], beam_width=beam_width))
-                    p+=1; model_flag = False
-                else: # num & punc
-                    lit_seg.append(self.numsym_model(seg[p]))
-                    p+=1; model_flag = False
-            else:
-                p+=1
+                    p+=1
 
-        final_result = [""]
-        for seg in lit_seg:
+                elif seg[p][0] in self._numsym_set: # num & punc
+                    lit_seg.append(self.numsym_model(seg[p]))
+                    p+=1
+                else:
+                    lit_seg.append([ seg[p] ])
+                    p+=1
+            # else:
+            #     lit_seg.append([ seg[p] ])
+            #     p+=1
+
+        ## IF segment less/equal to 2 then return combinotorial,
+        ## ELSE only return top1 of each result concatenated
+        if len(lit_seg) == 1:
+            final_result = lit_seg[0]
+
+        elif len(lit_seg) == 2:
+            final_result = [""]
+            for seg in lit_seg:
+                new_result = []
+                for s in seg:
+                    for f in final_result:
+                        new_result.append(f+s)
+                final_result = new_result
+
+        else:
             new_result = []
-            for s in seg:
-                for f in final_result:
-                    new_result.append(f+s)
-            final_result = new_result
+            for seg in lit_seg:
+                new_result.append(seg[0])
+            final_result = ["".join(new_result) ]
 
         return final_result
 
@@ -644,7 +660,7 @@ class XlitEngine():
                 return res_list[:topk]
 
             except Exception as error:
-                print("Error:", error)
+                print(traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
@@ -657,7 +673,7 @@ class XlitEngine():
                 return res_dict
 
             except Exception as error:
-                print("Error:", error)
+                print(traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
@@ -680,7 +696,7 @@ class XlitEngine():
                 return out_str[:-1]
 
             except Exception as error:
-                print("Error:", error)
+                print(traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
@@ -696,7 +712,7 @@ class XlitEngine():
                 return res_dict
 
             except Exception as error:
-                print("Error:", error)
+                print(traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
