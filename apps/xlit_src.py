@@ -515,7 +515,7 @@ class XlitPiston():
         ''' tgt_glyph_obj.numsym_map[x] returns a list object
         '''
         if len(seg) == 1:
-            return self.tgt_glyph_obj.numsym_map[n] + [seg]
+            return  [seg] + self.tgt_glyph_obj.numsym_map[seg]
 
         a = [self.tgt_glyph_obj.numsym_map[n][0] for n in seg]
         return [seg] + ["".join(a)]
@@ -640,8 +640,8 @@ class XlitEngine():
 
         if (lang_code in self.langs):
             try:
-                res_list = self.lang_model[lang_code].inferencer(eng_word, beam_width = 10)
-                return res_list[topk]
+                res_list = self.lang_model[lang_code].inferencer(eng_word, beam_width = beam_width)
+                return res_list[:topk]
 
             except Exception as error:
                 print("Error:", error)
@@ -652,8 +652,8 @@ class XlitEngine():
             try:
                 res_dict = {}
                 for la in self.lang_model:
-                    res = self.lang_model[la].inferencer(eng_word, beam_width = 10)
-                    res_dict[la] = res[topk]
+                    res = self.lang_model[la].inferencer(eng_word, beam_width = beam_width)
+                    res_dict[la] = res[:topk]
                 return res_dict
 
             except Exception as error:
@@ -675,7 +675,7 @@ class XlitEngine():
             try:
                 out_str = ""
                 for word in eng_sentence.split():
-                    res_ = self.lang_model[lang_code].inferencer(word, beam_width = 10)
+                    res_ = self.lang_model[lang_code].inferencer(word, beam_width = beam_width)
                     out_str = out_str + res_[0] + " "
                 return out_str[:-1]
 
@@ -690,7 +690,7 @@ class XlitEngine():
                 for la in self.lang_model:
                     out_str = ""
                     for word in eng_sentence.split():
-                        res_ = self.lang_model[la].inferencer(word, beam_width = 10)
+                        res_ = self.lang_model[la].inferencer(word, beam_width = beam_width)
                         out_str = out_str + res_[0] + " "
                     res_dict[la] = out_str[:-1]
                 return res_dict
