@@ -90,7 +90,8 @@ def xlit_api(lang_code, eng_word):
         return jsonify(response)
 
     try:
-        xlit_result = engine.translit_word(eng_word, lang_code)
+        ## Limit char count to --> 70
+        xlit_result = engine.translit_word(eng_word[:70], lang_code)
     except Exception as e:
         xlit_result = XlitError.internal_err
 

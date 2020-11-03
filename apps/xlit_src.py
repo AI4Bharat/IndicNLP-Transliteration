@@ -562,31 +562,27 @@ class XlitPiston():
 
         p = 0
         while p < len(seg):
-            # if p < 3:
-                if seg[p][0] in self._natscr_set:
-                    lit_seg.append([seg[p]])
-                    p+=1
+            if seg[p][0] in self._natscr_set:
+                lit_seg.append([seg[p]])
+                p+=1
 
-                elif seg[p][0] in self._inchar_set:
-                    lit_seg.append(self.character_model(seg[p], beam_width=beam_width))
-                    p+=1
+            elif seg[p][0] in self._inchar_set:
+                lit_seg.append(self.character_model(seg[p], beam_width=beam_width))
+                p+=1
 
-                elif seg[p][0] in self._numsym_set: # num & punc
-                    lit_seg.append(self.numsym_model(seg[p]))
-                    p+=1
-                else:
-                    lit_seg.append([ seg[p] ])
-                    p+=1
-            # else:
-            #     lit_seg.append([ seg[p] ])
-            #     p+=1
+            elif seg[p][0] in self._numsym_set: # num & punc
+                lit_seg.append(self.numsym_model(seg[p]))
+                p+=1
+            else:
+                lit_seg.append([ seg[p] ])
+                p+=1
 
         ## IF segment less/equal to 2 then return combinotorial,
         ## ELSE only return top1 of each result concatenated
         if len(lit_seg) == 1:
             final_result = lit_seg[0]
 
-        elif len(lit_seg) == 2:
+        elif len(lit_seg) <= 3:
             final_result = [""]
             for seg in lit_seg:
                 new_result = []
