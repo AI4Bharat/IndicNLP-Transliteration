@@ -526,7 +526,7 @@ class XlitPiston():
 
         sequence = sequence.lower()
         accepted = set().union(self._numsym_set, self._inchar_set, self._natscr_set)
-        sequence = ''.join([i for i in sequence if i in accepted])
+        # sequence = ''.join([i for i in sequence if i in accepted])
 
         segment = []
         idx = 0
@@ -549,6 +549,12 @@ class XlitPiston():
             # for Input-Roman Chars
             temp = ""
             while len(seq_) and seq_[0] in self._inchar_set:
+                temp += seq_[0]
+                seq_.pop(0)
+            if temp != "": segment.append(temp)
+
+            temp = ""
+            while len(seq_) and seq_[0] not in accepted:
                 temp += seq_[0]
                 seq_.pop(0)
             if temp != "": segment.append(temp)
@@ -582,7 +588,7 @@ class XlitPiston():
         if len(lit_seg) == 1:
             final_result = lit_seg[0]
 
-        elif len(lit_seg) <= 3:
+        elif len(lit_seg) == 2:
             final_result = [""]
             for seg in lit_seg:
                 new_result = []
