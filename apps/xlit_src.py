@@ -47,7 +47,7 @@ class Encoder(nn.Module):
                           num_layers= self.enc_layers,
                           bidirectional= bidirectional)
         else:
-            raise Exception("unknown RNN type mentioned")
+            raise Exception("XlitError: unknown RNN type mentioned")
 
     def forward(self, x, x_sz, hidden = None):
         """
@@ -130,7 +130,7 @@ class Decoder(nn.Module):
                           num_layers= self.dec_layers,
                           batch_first = True )
         else:
-            raise Exception("unknown RNN type mentioned")
+            raise Exception("XlitError: unknown RNN type mentioned")
 
         self.fc = nn.Sequential(
             nn.Linear(self.dec_hidden_dim, self.dec_embed_dim), nn.LeakyReLU(),
@@ -185,7 +185,7 @@ class Decoder(nn.Module):
         hidden: n_layer, batch_size, hidden_size | lstm: (h_n, c_n)
         '''
         if (hidden is None) and (self.use_attention is False):
-            raise Exception( "No use of a decoder with No attention and No Hidden")
+            raise Exception( "XlitError: No use of a decoder with No attention and No Hidden")
 
         batch_sz = x.shape[0]
 
@@ -248,7 +248,7 @@ class Seq2Seq(nn.Module):
               or _force_en2dec_hid_conv
             ):
             if encoder.enc_rnn_type == "lstm" or encoder.enc_rnn_type == "lstm":
-                raise Exception("conv for enc2dec_hid not implemented; Change the layer numbers appropriately")
+                raise Exception("XlitError: conv for enc2dec_hid not implemented; Change the layer numbers appropriately")
 
             self.use_conv_4_enc2dec_hid = True
             self.enc_hid_1ax = encoder.enc_directions * encoder.enc_layers
@@ -400,7 +400,7 @@ class GlyphStrawboss():
             return vec
 
         except Exception as error:
-            print("Error In word:", word, "Error Char not in Token:", error)
+            print("XlitError: In word:", word, "Error Char not in Token:", error)
             sys.exit()
 
     def xlitvec2word(self, vector):
@@ -427,7 +427,7 @@ class VocabSanitizer():
             self.vocab_df = pd.read_csv(data_file).set_index('WORD')
             self.vocab_set = set( self.vocab_df.index )
         else:
-            print("Only Json/CSV file extension supported")
+            print("XlitError: Only Json/CSV file extension supported")
 
     def reposition(self, word_list):
         '''Reorder Words in list
@@ -615,16 +615,16 @@ class XlitEngine():
             elif lang2use in lineup:
                 self.lang_config[lang2use] = lineup[lang2use]
             else:
-                raise "The entered Langauge code not found. Available are {}".format(lineup.keys())
+                raise Exception("XlitError: The entered Langauge code not found. Available are {}".format(lineup.keys()) )
 
         elif isinstance(lang2use, Iterable):
                 for l in lang2use:
                     try:
                         self.lang_config[l] = lineup[l]
                     except:
-                        print("Language code {} not found, Skipping...".format(l))
+                        print("XlitError: Language code {} not found, Skipping...".format(l))
         else:
-            raise "lang2use must be a list of language codes (or) string of single language code"
+            raise Exception("XlitError: lang2use must be a list of language codes (or) string of single language code" )
 
         self.langs = {}
         self.lang_model = {}
@@ -642,7 +642,7 @@ class XlitEngine():
                 )
                 self.langs[la] = self.lang_config[la]["name"]
             except Exception as error:
-                print("Failure in loading {} \n".format(la), error)
+                print("XlitError: Failure in loading {} \n".format(la), error)
                 print(XlitError.loading_err.value)
 
 
@@ -656,7 +656,7 @@ class XlitEngine():
                 return res_list[:topk]
 
             except Exception as error:
-                print(traceback.format_exc())
+                print("XlitError:", traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
@@ -669,12 +669,12 @@ class XlitEngine():
                 return res_dict
 
             except Exception as error:
-                print(traceback.format_exc())
+                print("XlitError:", traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
         else:
-            print("Unknown Langauge requested", lang_code)
+            print("XlitError: Unknown Langauge requested", lang_code)
             print(XlitError.lang_err.value)
             return XlitError.lang_err
 
@@ -692,7 +692,7 @@ class XlitEngine():
                 return out_str[:-1]
 
             except Exception as error:
-                print(traceback.format_exc())
+                print("XlitError:", traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
@@ -708,12 +708,12 @@ class XlitEngine():
                 return res_dict
 
             except Exception as error:
-                print(traceback.format_exc())
+                print("XlitError:", traceback.format_exc())
                 print(XlitError.internal_err.value)
                 return XlitError.internal_err
 
         else:
-            print("Unknown Langauge requested", lang_code)
+            print("XlitError: Unknown Langauge requested", lang_code)
             print(XlitError.lang_err.value)
             return XlitError.lang_err
 

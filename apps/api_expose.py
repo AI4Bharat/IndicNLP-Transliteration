@@ -98,7 +98,7 @@ def xlit_api(lang_code, eng_word):
 
     if isinstance(xlit_result, XlitError):
         response['error'] = xlit_result.value
-        print(traceback.format_exc())
+        print("XlitError:", traceback.format_exc())
     else:
         response['result'] = xlit_result
         response['success'] = True
