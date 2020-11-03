@@ -3,7 +3,13 @@ Expose Transliteration Engine as an HTTP API.
 
 USAGE:
     1. $ sudo env PATH=$PATH python3 api_expose.py
-    2. Run in browser: http://localhost:8000/tl/gom/a
+    2. Run in browser:
+            http://localhost:8000/tl/ta/amma
+            http://localhost:8000/languages
+
+FORMAT:
+    Based on the Varnam API standard
+    https://api.varnamproject.com/tl/hi/bharat
 """
 from flask import Flask, jsonify, request, make_response
 from uuid import uuid4
@@ -54,7 +60,7 @@ def write_userdata(data):
 
 @app.route('/languages', methods = ['GET', 'POST'])
 def supported_languages():
-    # Format: https://api.varnamproject.com/languages
+    # Format - https://xlit-api.ai4bharat.org/languages
     langs = []
     for code, name in engine.langs.items():
         langs.append({
@@ -62,7 +68,7 @@ def supported_languages():
             "Identifier": code,
             "DisplayName": name,
             "Author": "AI4Bharat",
-            "CompiledDate": "23-June-2020",
+            "CompiledDate": "07-November-2020",
             "IsStable": True
         })
     # TODO: Save this variable permanently, as it will be constant
@@ -76,7 +82,7 @@ def supported_languages():
 
 @app.route('/tl/<lang_code>/<eng_word>', methods = ['GET', 'POST'])
 def xlit_api(lang_code, eng_word):
-    # Format: https://api.varnamproject.com/tl/hi/bharat
+    # Format: https://xlit-api.ai4bharat.org/tl/ta/bharat
     response = {
         'success': False,
         'error': '',
