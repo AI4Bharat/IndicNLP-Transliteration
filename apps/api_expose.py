@@ -15,6 +15,7 @@ from flask import Flask, jsonify, request, make_response
 from uuid import uuid4
 from datetime import datetime
 import traceback
+from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import sys
 import enum
@@ -27,9 +28,10 @@ class XlitError(enum.Enum):
     unknown_err = "Unknown Failure"
     loading_err = "Loading failed ;( Check if metadata/paths are correctly configured."
 
-
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+
+## ------------------------- Configure ---------------------------------------- ##
 
 DEBUG = True
 ## Set in order to host in specific domain
@@ -37,22 +39,80 @@ SSL_FILES = None
 # SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
 #              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
+CLOUD_BUCKET = None # <<<<<<<< set appropriately if needed
 
 ## ------------------------- Logging ---------------------------------------- ##
-
 os.makedirs('logs/', exist_ok=True)
-USER_CHOICES_LOGS = 'logs/user_choices.csv'
+USER_CHOICES_LOGS = 'logs/user_choices.tsv'
+ANNOTATION_LOGS = 'logs/annotation_data.tsv'
 
-# Write CSV header
 USER_DATA_FIELDS = ['user_ip', 'user_id', 'timestamp', 'input', 'lang', 'output', 'topk_index']
-if not os.path.isfile(USER_CHOICES_LOGS):
-    with open(USER_CHOICES_LOGS, 'w', buffering=1) as f:
-        writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
-        writer.writeheader()
+ANNOTATE_DATA_FIELDS = ['user_ip', 'user_id', 'timestamp','lang', 'native', 'ann1', 'ann2', 'ann3']
+
+def create_log_files():
+    if not os.path.isfile(USER_CHOICES_LOGS):
+        with open(USER_CHOICES_LOGS, 'w', buffering=1) as f:
+            writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+            writer.writeheader()
+
+    if not os.path.isfile(ANNOTATION_LOGS):
+        with open(ANNOTATION_LOGS, 'w', buffering=1) as f:
+            writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS)
+            writer.writeheader()
+
+create_log_files()
+
+## ----- Google cloud
+
+if CLOUD_BUCKET:
+    from google.cloud import storage
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(CLOUD_BUCKET)
+
+def save_data_to_bucket(bucket_file, local_file, fields):
+    ''' GCP objects are immutable '''
+    print("save routine invoked....")
+
+    blob = bucket.get_blob(bucket_file)
+    if blob == None:
+        data = "\t".join(fields)
+        blob = bucket.blob(bucket_file)
+        blob.upload_from_string(data)
+        blob = bucket.get_blob(bucket_file)
+
+    data = blob.download_as_string()
+    data = data.decode('utf-8')
+    with open(local_file) as f:
+        y,z = f.read().split("\n", 1)
+
+    data = data + z
+    ublob = bucket.blob(bucket_file)
+    ublob.upload_from_string(data)
+    os.remove(local_file)
+
+
+def bucket_routine():
+    save_data_to_bucket("DATA_LOGS/user_choice_data.tsv", USER_CHOICES_LOGS ,USER_CHOICES_LOGS)
+    save_data_to_bucket("DATA_LOGS/annotation_data.tsv", ANNOTATION_LOGS, ANNOTATE_DATA_FIELDS)
+    create_log_files()
+
+if CLOUD_BUCKET:
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(bucket_routine,'interval',minutes=3)
+    sched.start()
+
+
+## --------------------
 
 def write_userdata(data):
     with open(USER_CHOICES_LOGS, 'a', buffering=1) as f:
         writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+        writer.writerow(data)
+    return
+
+def write_annotatedata(data):
+    with open(ANNOTATION_LOGS, 'a', buffering=1) as f:
+        writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS)
         writer.writerow(data)
     return
 
@@ -135,6 +195,15 @@ def learn_from_user():
     write_userdata(data)
     return jsonify({'status': 'Success'})
 
+@app.route('/annotate', methods=['POST'])
+def annotate_by_user():
+    data = request.get_json(force=True)
+    data['user_ip'] = request.remote_addr
+    if 'user_id' not in data:
+        data['user_id'] = request.cookies['xlit_user_id'] if 'xlit_user_id' in request.cookies else None
+    data['timestamp'] = str(datetime.utcnow()) + ' +0000 UTC'
+    write_annotatedata(data)
+    return jsonify({'status': 'Success'})
 
 
 ## -------------------------- Server Setup ---------------------------------- ##
