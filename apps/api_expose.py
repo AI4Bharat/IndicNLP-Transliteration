@@ -33,13 +33,13 @@ app.config['JSON_AS_ASCII'] = False
 
 ## ------------------------- Configure ---------------------------------------- ##
 
-DEBUG = True
+DEBUG = False
 ## Set in order to host in specific domain
 SSL_FILES = None
 # SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
 #              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
-CLOUD_BUCKET = None # <<<<<<<< set appropriately if needed
+CLOUD_STORE = False #
 
 ## ------------------------- Logging ---------------------------------------- ##
 os.makedirs('logs/', exist_ok=True)
@@ -62,45 +62,20 @@ def create_log_files():
 
 create_log_files()
 
-## ----- Google cloud
+## ----- Google FireStore
+"""
+Requires gcp credentials
+"""
+if CLOUD_STORE:
+    from google.cloud import firestore
+    db = firestore.Client()
+    usrch_coll = ""
+    annot_coll = ""
 
-if CLOUD_BUCKET:
-    from google.cloud import storage
-    storage_client = storage.Client()
-    bucket = storage_client.get_bucket(CLOUD_BUCKET)
-
-def save_data_to_bucket(bucket_file, local_file, fields):
-    ''' GCP objects are immutable '''
-    print("save routine invoked....")
-
-    blob = bucket.get_blob(bucket_file)
-    if blob == None:
-        data = "\t".join(fields)
-        blob = bucket.blob(bucket_file)
-        blob.upload_from_string(data)
-        blob = bucket.get_blob(bucket_file)
-
-    data = blob.download_as_string()
-    data = data.decode('utf-8')
-    with open(local_file) as f:
-        y,z = f.read().split("\n", 1)
-
-    data = data + z
-    ublob = bucket.blob(bucket_file)
-    ublob.upload_from_string(data)
-    os.remove(local_file)
-
-
-def bucket_routine():
-    save_data_to_bucket("DATA_LOGS/user_choice_data.tsv", USER_CHOICES_LOGS ,USER_CHOICES_LOGS)
-    save_data_to_bucket("DATA_LOGS/annotation_data.tsv", ANNOTATION_LOGS, ANNOTATE_DATA_FIELDS)
-    create_log_files()
-
-if CLOUD_BUCKET:
-    sched = BackgroundScheduler(daemon=True)
-    sched.add_job(bucket_routine,'interval',minutes=3)
-    sched.start()
-
+def add_document(coll, data): # FireStore
+    doc_title = str(uuid4().hex)
+    ref = db.collection(coll).document(doc_title)
+    ref.set(data)
 
 ## --------------------
 
@@ -108,12 +83,16 @@ def write_userdata(data):
     with open(USER_CHOICES_LOGS, 'a', buffering=1) as f:
         writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
         writer.writerow(data)
+    if CLOUD_STORE:
+        add_document(usrch_coll, data)
     return
 
 def write_annotatedata(data):
     with open(ANNOTATION_LOGS, 'a', buffering=1) as f:
         writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS)
         writer.writerow(data)
+    if CLOUD_STORE:
+        add_document(annot_coll, data)
     return
 
 ## ---------------------------- API End-points ------------------------------ ##
