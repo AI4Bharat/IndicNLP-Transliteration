@@ -615,6 +615,7 @@ class XlitEngine():
     def __init__(self, lang2use = "all", config_path = "models/lineup.json"):
 
         lineup = json.load( open(os.path.join(F_DIR, config_path)) )
+        self.lang_config = {}
         if isinstance(lang2use, str):
             if lang2use == "all":
                 self.lang_config = lineup
