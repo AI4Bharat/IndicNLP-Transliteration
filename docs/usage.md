@@ -1,10 +1,24 @@
-# Transliteration API
+# Transliteration Python Library
 
-Transliteration models for languages is made available to be download and deploy.
-Please download the latest release and follow procedures in [readme](https://github.com/AI4Bharat/IndianNLP-Transliteration/blob/jgeob-dev/apps/README.md).
+Transliteration models for languages are made available as releases, which could be  downloaded and deployed at ease.
+Please download the latest release and follow procedures in [readme](apps/README.md).
 
-# Transliteration UI
+[<img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>](https://github.com/AI4Bharat/IndianNLP-Transliteration)
+
+# Transliteration Web-UI
 
 Web interface for using transliteration service for document and content creation.
 
-[<img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>](https://github.com/AI4Bharat/Xlit-Transliteration_UI)
+[<img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>](https://github.com/AI4Bharat/Indic-Input-Tool-UI)
+
+
+---
+
+All the NN models (along with metadata) of Xlit - Transliteration are licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
+
+---
+
+[cc-by-sa]: http://creativecommons.org/licenses/by/4.0/
+[cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
+
+[github-badge]: <img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>

@@ -1,7 +1,7 @@
 # Dataset
 Datasets were annotated with the help of native language users by [Story Weaver](https://storyweaver.org.in/).
 
-Xlit - Transliteration Dataset by [Story Weaver](https://storyweaver.org.in/) & [AI4Bharat](https://ai4bharat.org/) is licensed under a [Creative Commons Attribution 4.0 International License][cc-by].
+Xlit - Transliteration Datasets by [Story Weaver](https://storyweaver.org.in/) & [AI4Bharat](https://ai4bharat.org/) are licensed under a [Creative Commons Attribution 4.0 International License][cc-by].
 
 [![CC BY 4.0][cc-by-image]][cc-by]
 
@@ -23,7 +23,12 @@ Other [Transliteration datasets](https://github.com/AI4Bharat/indicnlp_catalog#p
 
 # Checkpoints
 
-Check the latest release for the checkpoints and apps to be hosted - [Release](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases)
+Transliteration NN models for languages are made available, which is easy to download and deploy.
+Please download the latest [release](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/latest) and follow procedures in [readme](apps/README.md).
+
+All the NN models (along with metadata) of Xlit - Transliteration are licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
+
+[![CC BY SA 4.0][cc-by-sa-image]][cc-by-sa]
 
 
 
@@ -31,3 +36,6 @@ Check the latest release for the checkpoints and apps to be hosted - [Release](h
 
 [cc-by]: http://creativecommons.org/licenses/by/4.0/
 [cc-by-image]: https://licensebuttons.net/l/by/4.0/88x31.png
+
+[cc-by-sa]: http://creativecommons.org/licenses/by/4.0/
+[cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png

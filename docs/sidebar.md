@@ -1,7 +1,8 @@
 * [Mission Statement](mission-statement)
 
-* [Usage](usage)
-  * [💻 Xlit Website](http://xlit.ai4bharat.org/)
+* [Ecosystem](usage)
+  * [Xlit Website](http://xlit.ai4bharat.org/)
+  * [Xlit Python Library](../apps/README.md)
 
 * [Datasets & Models](resources)
 
@@ -9,8 +10,11 @@
   * [Architecture](how-it-works/architecture)
   * [Other Approaches](how-it-works/experiments)
 
-
 * [Publications](publications)
-* [Contributing](contributing)
 
+* [Attributions](attributions)
+* [How to Contribute](contributing)
 * [About & Contact](about)
+
+
+---

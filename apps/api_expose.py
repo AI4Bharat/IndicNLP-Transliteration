@@ -3,19 +3,21 @@ Expose Transliteration Engine as an HTTP API.
 
 USAGE:
     1. $ sudo env PATH=$PATH python3 api_expose.py
-    2. Run in browser:
+       $ sudo env PATH=$PATH GOOGLE_APPLICATION_CREDENTIALS=/path_to_cred/ python3 api_expose.py
+
+    2. Run in browser: production_port - 80
             http://localhost:8000/tl/ta/amma
             http://localhost:8000/languages
 
 FORMAT:
     Based on the Varnam API standard
     https://api.varnamproject.com/tl/hi/bharat
+
 """
 from flask import Flask, jsonify, request, make_response
 from uuid import uuid4
 from datetime import datetime
 import traceback
-from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import sys
 import enum
@@ -69,8 +71,8 @@ Requires gcp credentials
 if CLOUD_STORE:
     from google.cloud import firestore
     db = firestore.Client()
-    usrch_coll = ""
-    annot_coll = ""
+    usrch_coll = "path_to_collection"
+    annot_coll = "path_to_collection"
 
 def add_document(coll, data): # FireStore
     doc_title = str(uuid4().hex)
