@@ -356,7 +356,7 @@ class GlyphStrawboss():
             # Smallcase alone
             self.glyphs = [chr(alpha) for alpha in range(97, 122+1)]
         else:
-            self.dossier = json.load(open(glyphs))
+            self.dossier = json.load(open(glyphs, encoding='utf-8'))
             self.glyphs = self.dossier["glyphs"]
             self.numsym_map = self.dossier["numsym_map"]
 
@@ -422,7 +422,7 @@ class VocabSanitizer():
         '''
         extension = os.path.splitext(data_file)[-1]
         if extension == ".json":
-            self.vocab_set  = set( json.load(open(data_file)) )
+            self.vocab_set  = set( json.load(open(data_file, encoding='utf-8')) )
         elif extension == ".csv":
             self.vocab_df = pd.read_csv(data_file).set_index('WORD')
             self.vocab_set = set( self.vocab_df.index )
@@ -460,7 +460,7 @@ class XlitPiston():
         self.tgt_glyph_obj = GlyphStrawboss(glyphs = tglyph_cfg_file)
         self.voc_sanity = VocabSanitizer(vocab_file)
 
-        self._numsym_set = set(json.load(open(tglyph_cfg_file))["numsym_map"].keys() )
+        self._numsym_set = set(json.load(open(tglyph_cfg_file, encoding='utf-8'))["numsym_map"].keys() )
         self._inchar_set = set("abcdefghijklmnopqrstuvwxyz")
         self._natscr_set = set().union(self.tgt_glyph_obj.glyphs,
                             sum(self.tgt_glyph_obj.numsym_map.values(),[]) )
@@ -606,15 +606,19 @@ class XlitPiston():
         return final_result
 
 from collections.abc import Iterable
+from pydload import dload
+import zipfile
+MODEL_DOWNLOAD_URL_PREFIX = 'https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/download/xlit_v0.5.0/'
+
 class XlitEngine():
     """
     For Managing the top level tasks and applications of transliteration
 
     Global Variables: F_DIR
     """
-    def __init__(self, lang2use = "all", config_path = "models/lineup.json"):
+    def __init__(self, lang2use = "all", config_path = "models/default_lineup.json"):
 
-        lineup = json.load( open(os.path.join(F_DIR, config_path)) )
+        lineup = json.load( open(os.path.join(F_DIR, config_path), encoding='utf-8') )
         self.lang_config = {}
         if isinstance(lang2use, str):
             if lang2use == "all":
@@ -632,18 +636,26 @@ class XlitEngine():
                         print("XlitError: Language code {} not found, Skipping...".format(l))
         else:
             raise Exception("XlitError: lang2use must be a list of language codes (or) string of single language code" )
-
+        
+        if os.access(F_DIR, os.W_OK | os.X_OK):
+            models_path = os.path.join(F_DIR, 'models')
+        else:
+            user_home = os.path.expanduser("~")
+            models_path = os.path.join(user_home, '.AI4Bharat_Xlit_Models')
+        os.makedirs(models_path, exist_ok=True)
+        self.download_models(models_path)
+        
         self.langs = {}
         self.lang_model = {}
         for la in self.lang_config:
             try:
                 print("Loading {}...".format(la) )
                 self.lang_model[la] = XlitPiston(
-                    weight_path = os.path.join(F_DIR, "models",
+                    weight_path = os.path.join(models_path,
                                     self.lang_config[la]["weight"]) ,
-                    vocab_file = os.path.join(F_DIR, "models",
+                    vocab_file = os.path.join(models_path,
                                     self.lang_config[la]["vocab"]),
-                    tglyph_cfg_file = os.path.join(F_DIR, "models",
+                    tglyph_cfg_file = os.path.join(models_path,
                                     self.lang_config[la]["script"]),
                     iglyph_cfg_file = "en",
                 )
@@ -652,7 +664,31 @@ class XlitEngine():
                 print("XlitError: Failure in loading {} \n".format(la), error)
                 print(XlitError.loading_err.value)
 
-
+    def download_models(self, models_path):
+        '''
+        Download models from GitHub Releases if not exists
+        '''
+        for l in self.lang_config:
+            lang_name = self.lang_config[l]["eng_name"]
+            lang_model_path = os.path.join(models_path, lang_name)
+            if not os.path.isdir(lang_model_path):
+                print('Downloading model for language: %s' % lang_name)
+                remote_url = MODEL_DOWNLOAD_URL_PREFIX + lang_name + '.zip'
+                downloaded_zip_path = os.path.join(models_path, lang_name + '.zip')
+                dload(url=remote_url, save_to_path=downloaded_zip_path, max_time=None)
+                
+                if not os.path.isfile(downloaded_zip_path):
+                    exit(f'ERROR: Unable to download model from {remote_url} into {models_path}')
+                
+                with zipfile.ZipFile(downloaded_zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(models_path)
+                
+                if os.path.isdir(lang_model_path):
+                    os.remove(downloaded_zip_path)
+                else:
+                    exit(f'ERROR: Unable to find models in {lang_model_path} after download')
+        return        
+    
     def translit_word(self, eng_word, lang_code = "default", topk = 7, beam_width = 10):
         if eng_word == "":
             return []
