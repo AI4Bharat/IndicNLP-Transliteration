@@ -34,29 +34,33 @@ This repository is developed to facilate easier experimentation with different n
 A Condensed standalone version of a simple model training, inferencing and accuracy computation is created as jupyter notebook.<br>
 [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AI4Bharat/IndianNLP-Transliteration/blob/jgeob-dev/NoteBooks/Xlit_TrainingSetup_condensed.ipynb)
 
+### Pythonic Library
 
-### Transliteration Library
+Pythonic transliteration library is available to download the latest release and follow procedures in [apps readme](apps/README.md).
 
-Transliteration models for languages are made available as releases, which could be  downloaded and deployed at ease.
-Please download the latest release and follow procedures in [readme](apps/README.md).
+---
+## NeuralNet Models
+
+Transliteration models for languages are made available as releases, in a easy deployable way.
 
 All the NN models (along with metadata) of Xlit - Transliteration are licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
 
 [![CC BY SA 4.0][cc-by-sa-image]][cc-by-sa]
 
 ---
-## Data
+## Datasets
+
 Datasets created as part of the project for languages Maithili, Konkani, Hindi are made available as JSON files under [downloads](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/tag/DATA).
 
 Xlit - Transliteration Datasets by [Story Weaver](https://storyweaver.org.in/) & [AI4Bharat](https://ai4bharat.org/) are licensed under a [Creative Commons Attribution 4.0 International License][cc-by].
 
 [![CC BY 4.0][cc-by-image]][cc-by]
 
-Kindly attribute if you use the dataset for your research or
+Kindly attribute if you use the dataset for your research or products
 
 ---
 ## Contact
-If you have benefited by our datasets/models/services or feel motivated by our works, we would like to hear from you.
+If you have benefited by our datasets/models/services or got motivated by our works, we would like to hear from you.
 
 email: opensource@ai4bharat.org
 

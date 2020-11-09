@@ -1,8 +1,8 @@
 * [Mission Statement](mission-statement)
 
-* [Ecosystem](usage)
+* [Input Tool Ecosystems](usage)
   * [Xlit Website](http://xlit.ai4bharat.org/)
-  * [Xlit Python Library](../apps/README.md)
+  * [Xlit Python Library](apps/README.md)
 
 * [Datasets & Models](resources)
 
@@ -13,7 +13,7 @@
 * [Publications](publications)
 
 * [Attributions](attributions)
-* [How to Contribute](contributing)
+
 * [About & Contact](about)
 
 
