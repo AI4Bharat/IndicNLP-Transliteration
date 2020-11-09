@@ -1,8 +1,8 @@
 * [Mission Statement](mission-statement)
 
-* [Input Tool Ecosystems](usage)
+* [**Input Tool Ecosystems**](usage)
   * [Xlit Website](http://xlit.ai4bharat.org/)
-  * [Xlit Python Library](apps/README.md)
+  * [Xlit Python Library](https://github.com/AI4Bharat/IndianNLP-Transliteration/blob/jgeob-dev/apps/README.md)
 
 * [Datasets & Models](resources)
 
