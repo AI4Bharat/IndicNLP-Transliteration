@@ -1,6 +1,6 @@
 * [Mission Statement](mission-statement)
 
-* [**Input Tool Ecosystems**](usage) <br>
+* [**Input Tool Ecosystems**](usage)
   * [Xlit Website](http://xlit.ai4bharat.org/)
   * [Xlit Python Library](https://pypi.org/project/ai4bharat-transliteration)
 

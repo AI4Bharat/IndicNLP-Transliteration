@@ -1,7 +1,5 @@
 # AI4Bharat Transliteration Application
 
-## Deep Indic Xlit Engine
-
 A deep transliteration engine for major languages of the Indian sub-continent.
 
 This package provides support for:
@@ -88,6 +86,17 @@ print(out)
 
 ```
 
+**Example 4** : Transliteration for all available languages
+```py
+
+e = XlitEngine()
+out = e.translit_sentence("Hello World", beam_width=10)
+print(out)
+# {'bn': 'হেল ওয়ার্ল্ড', 'gu': 'હેલો વર્લ્ડ', 'hi': 'हेलो वर्ल्ड', 'kn': 'ಹೆಲ್ಲೊ ವರ್ಲ್ಡ್', 'gom': 'हॅलो वर्ल्ड', 'mai': 'हेल्लो वर्ल्ड', 'ml': 'ഹലോ വേൾഡ്', 'mr': 'हेलो वर्ल्ड', 'pa': 'ਹੇਲੋ ਵਰਲਡ', 'sd': 'هيلو ورلد', 'si': 'හිලෝ වර්ල්ඩ්', 'ta': 'ஹலோ வார்ல்ட்', 'te': 'హల్లో వరల్డ్', 'ur': 'ہیلو وارڈ'}
+
+```
+
+
 ### Web API Server
 
 Running a flask server in 3 lines:
@@ -97,7 +106,7 @@ app, engine = xlit_server.get_app()
 app.run(debug=True, host='0.0.0.0', port=8000)
 ```
 
-You can also check the sample script as shown below:
+You can also check the extended [sample script](https://github.com/AI4Bharat/IndianNLP-Transliteration/blob/master/apps/api_expose.py) as shown below:
 
 1. Make required modification in SSL paths in `api_expose.py`. By default set to local host and both http & https are enabled.
 
@@ -117,3 +126,10 @@ http://localhost:80/languages
 ## Release Notes
 
 This package contains applications built around the Transliteration engine. The contents of this package can also be downloaded from [latest GitHub release](https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/latest) is sufficient for inference usage.
+
+All the NN models (along with metadata) of Xlit - Transliteration are licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
+
+
+
+[cc-by-sa]: http://creativecommons.org/licenses/by/4.0/
+[cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png

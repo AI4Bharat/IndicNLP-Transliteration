@@ -25,7 +25,7 @@ Most languages in India do not have digital presence due to an underdeveloped ec
 ---
 ## Repository Usage
 
-For Attributions and Contributions check [here](docs/attributions) 🖖
+For Attributions and Contributions lists, [check here](docs/attributions) 🖖
 
 ### Training Procedures
 
@@ -36,9 +36,11 @@ A Condensed standalone version of a simple model training, inferencing and accur
 
 ### Pythonic Library
 
-Pythonic transliteration library is available to download the latest release and follow procedures in [apps readme](apps/README.md).
+Pythonic transliteration library is available as [Python Package Index](https://pypi.org/project/ai4bharat-transliteration/) and also under github releases. <br>
+Follow usages in [apps readme](apps/README.md).
 
 ---
+
 ## NeuralNet Models
 
 Transliteration models for languages are made available as releases, in a easy deployable way.
