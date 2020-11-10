@@ -97,7 +97,7 @@ app, engine = xlit_server.get_app()
 app.run(debug=True, host='0.0.0.0', port=8000)
 ```
 
-You can also check the sample script as shown below:  
+You can also check the extended [sample script](https://github.com/AI4Bharat/IndianNLP-Transliteration/blob/master/apps/api_expose.py) as shown below:  
 
 1. Make required modification in SSL paths in `api_expose.py`. By default set to local host and both http & https are enabled.
 
