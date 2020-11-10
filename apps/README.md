@@ -8,10 +8,16 @@ Contains Applications built around the Transliteration engine. The contents of t
 
 # Usage
 
-### Python Library
+## Python Library
 
-*Note: Initially set pythonpath environment variable* <br>
-`export PYTHONPATH=path/to/xlit_apps:$PYTHONPATH`
+### From Github Releases
+1. Download the release object xlit_apps_vx.x.x.zip <br>
+`$ wget https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/latest/download/xlit_apps_v0.4.1.zip`
+
+2. Set pythonpath environment variable with absolute path to repository<br>
+`export PYTHONPATH=/realpath/to/xlit_apps:$PYTHONPATH`
+
+3. Import and start using !
 
 **Example 1** : Using word Transliteration
 
@@ -71,7 +77,9 @@ print(out)
 
 ```
 
-### Web API
+---
+
+## Web API
 
 1. Make required modification in SSL paths in `api_expose.py`. By default set to local host and both http & https are enabled <br>
 
@@ -85,8 +93,9 @@ example: <br>
 https://localhost:80/tl/ta/amma  <br>
 https://localhost:80/languages  <br>
 
+---
 
-### Language Codes:
+## Language Codes:
 ```
 * bn  - Bengali
 * gom - Konkani Goan
