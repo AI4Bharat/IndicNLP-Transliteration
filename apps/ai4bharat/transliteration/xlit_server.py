@@ -169,7 +169,7 @@ def annotate_by_user():
 
 ## ----------------------------- Xlit Engine -------------------------------- ##
 
-from xlit_src import XlitEngine
+from .xlit_src import XlitEngine
 engine = XlitEngine()
 engine.exposed_langs = [
     {

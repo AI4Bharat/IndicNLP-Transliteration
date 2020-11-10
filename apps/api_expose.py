@@ -6,9 +6,7 @@ SSL_FILES = None
 # SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
 #              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
-BASEPATH = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(BASEPATH)
-import xlit_server
+from ai4bharat.transliteration import xlit_server
 
 app, engine = xlit_server.get_app()
 
