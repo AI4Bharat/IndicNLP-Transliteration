@@ -1,7 +1,10 @@
 .vscode
 data/*
 hypotheses/*
-apps/models/*
+apps/ai4bharat/transliteration/models/*/*
+*.egg-info/
+build/
+dist/
 logs
 *.log
 temp*
