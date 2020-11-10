@@ -1,7 +1,7 @@
 1. Dakshina Dataset <br>
 Processing South Asian Languages Written in the Latin Script: the Dakshina Dataset.
 Roark, B., Wolf-Sonkin, L., Kirov, C., Mielke, S. J., Johny, C., Demirsahin, I., & Hall, K. (2020, May). In Proceedings of The 12th Language Resources and Evaluation Conference (pp. 2413-2423). <br>
-https://github.com/google-research-datasets/dakshin
+https://github.com/google-research-datasets/dakshina
 
 2. AI4Bharat-IndicNLP Dataset <br>
 IndicNLPSuite: Monolingual Corpora, Evaluation Benchmarks and Pre-trained Multilingual Language Models for Indian Languages.

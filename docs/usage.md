@@ -20,7 +20,7 @@ The usage & documentation can be [found here](https://github.com/AI4Bharat/India
 
 ## Transliteration Web-UI
 
-Web interface for using transliteration service for document and content creation. [website](xlit.ai4bharat.org)
+Web interface for using transliteration service for document and content creation. [website](https://xlit.ai4bharat.org)
 
 [<img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>](https://github.com/AI4Bharat/Indic-Input-Tool-UI)
 
