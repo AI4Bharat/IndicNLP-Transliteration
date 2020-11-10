@@ -610,6 +610,22 @@ from pydload import dload
 import zipfile
 MODEL_DOWNLOAD_URL_PREFIX = 'https://github.com/AI4Bharat/IndianNLP-Transliteration/releases/download/xlit_v0.5.0/'
 
+def is_folder_writable(folder):
+    try:
+        os.makedirs(folder, exist_ok=True)
+        tmp_file = os.path.join(folder, '.write_test')
+        with open(tmp_file, 'w') as f:
+            f.write('Permission Check')
+        os.remove(tmp_file)
+        return True
+    except:
+        return False
+
+def is_directory_writable(path):
+    if os.name == 'nt':
+        return is_folder_writable(path)
+    return os.access(path, os.W_OK | os.X_OK)
+
 class XlitEngine():
     """
     For Managing the top level tasks and applications of transliteration
@@ -637,7 +653,7 @@ class XlitEngine():
         else:
             raise Exception("XlitError: lang2use must be a list of language codes (or) string of single language code" )
         
-        if os.access(F_DIR, os.W_OK | os.X_OK):
+        if is_directory_writable(F_DIR):
             models_path = os.path.join(F_DIR, 'models')
         else:
             user_home = os.path.expanduser("~")
