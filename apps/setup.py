@@ -29,4 +29,11 @@ setup(
     # packages=find_packages(exclude=("tests",)),
     include_package_data=True,
     install_requires=install_requires,
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development :: Libraries"
+    ],
 )
