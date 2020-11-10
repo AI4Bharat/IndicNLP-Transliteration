@@ -2,7 +2,7 @@
 
 * [**Input Tool Ecosystems**](usage) <br>
   * [Xlit Website](http://xlit.ai4bharat.org/)
-  * [Xlit Python Library](https://github.com/AI4Bharat/IndianNLP-Transliteration/blob/jgeob-dev/apps/README.md)
+  * [Xlit Python Library](https://pypi.org/project/ai4bharat-transliteration)
 
 * [Datasets & Models](resources)
 
