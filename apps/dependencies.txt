@@ -1,0 +1,6 @@
+torch
+numpy
+pydload
+flask
+flask_cors
+gevent
