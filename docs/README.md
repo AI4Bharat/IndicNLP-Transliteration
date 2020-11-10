@@ -1,8 +1,9 @@
-# IndianNLP-Transliteration
+# IndianNLP Deep-Transliteration
 
 Open-source transliteration engine for Indian Subcontinent Languages, powered by Deep Learning.
 
 **Supported Languages**
+
 * Bengali - বাংলা
 * Gujarati - ગુજરાતી
 * Hindi - हिंदी

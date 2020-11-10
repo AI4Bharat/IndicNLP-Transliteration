@@ -1,11 +1,24 @@
-# Transliteration Python Library
+# Xlit Ecosystem
 
-Transliteration models for languages are made available as releases, which could be  downloaded and deployed at ease.
-Please download the latest release and follow procedures in [readme](apps/README.md).
+**What is Xlit?**
+
+X+lit is short for Trans+Literation.  
+Xlit Engine is AI4Bharat's deep transliteration engine.
+
+## Transliteration Python Library
+
+Transliteration models for languages are made available as releases, which could be  downloaded and deployed at ease as a library.
+
+Installing the library:  
+```
+pip install ai4bharat-transliteration
+```
+
+The usage & documentation can be [found here](https://pypi.org/project/ai4bharat-transliteration).
 
 [<img src="https://img.shields.io/badge/github%20-%23121011.svg?&style=for-the-badge&logo=github&logoColor=white"/>](https://github.com/AI4Bharat/IndianNLP-Transliteration)
 
-# Transliteration Web-UI
+## Transliteration Web-UI
 
 Web interface for using transliteration service for document and content creation. [website](xlit.ai4bharat.org)
 
