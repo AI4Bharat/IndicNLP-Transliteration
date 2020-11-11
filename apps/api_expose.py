@@ -42,12 +42,12 @@ ANNOTATE_DATA_FIELDS = ['user_ip', 'user_id', 'timestamp','lang', 'native', 'ann
 def create_log_files():
     if not os.path.isfile(USER_CHOICES_LOGS):
         with open(USER_CHOICES_LOGS, 'w', buffering=1) as f:
-            writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+            writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS, delimiter = "\t")
             writer.writeheader()
 
     if not os.path.isfile(ANNOTATION_LOGS):
         with open(ANNOTATION_LOGS, 'w', buffering=1) as f:
-            writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS)
+            writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS, delimiter = "\t")
             writer.writeheader()
 
 create_log_files()
@@ -71,7 +71,7 @@ def add_document(coll, data): # FireStore
 
 def write_userdata(data):
     with open(USER_CHOICES_LOGS, 'a', buffering=1) as f:
-        writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=USER_DATA_FIELDS, delimiter = "\t")
         writer.writerow(data)
     if CLOUD_STORE:
         add_document(usrch_coll, data)
@@ -79,7 +79,7 @@ def write_userdata(data):
 
 def write_annotatedata(data):
     with open(ANNOTATION_LOGS, 'a', buffering=1) as f:
-        writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=ANNOTATE_DATA_FIELDS, delimiter = "\t")
         writer.writerow(data)
     if CLOUD_STORE:
         add_document(annot_coll, data)
@@ -112,7 +112,7 @@ def annotate_by_user():
     write_annotatedata(data)
     return jsonify({'status': 'Success'})
 
-## -------------------------- Server Setup ---------------------------------- ##	
+## -------------------------- Server Setup ---------------------------------- ##
 
 def host_https():
     https_server = WSGIServer(('0.0.0.0', 443), app,
@@ -122,7 +122,7 @@ def host_https():
     return
 
 if __name__ == '__main__':
-    
+
     if not DEBUG: # Production Server
         from flask_cors import CORS, cross_origin
         cors = CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
