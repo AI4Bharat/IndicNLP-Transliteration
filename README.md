@@ -25,7 +25,7 @@ Most languages in India do not have digital presence due to an underdeveloped ec
 ---
 ## Repository Usage
 
-For Attributions and Contributions lists, [check here](docs/attributions) 🖖
+For Attributions and Contributions lists, [check here](docs/attributions.md) 🖖
 
 ### Training Procedures
 
