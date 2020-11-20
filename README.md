@@ -1,5 +1,7 @@
 # IndianNLP-Transliteration
 
+[Project Website](https://transliteration.ai4bharat.org/) | [Demo UI](http://xlit.ai4bharat.org/) | [Python Library](https://pypi.org/project/ai4bharat-transliteration)
+
 The main goal of this project is to create open source input tools for content creation in under-represented languages in India. <br>
 It started in collaboration with [**Story Weaver**](https://storyweaver.org.in/about) a non-profit working towards  foundational literary education for children, supported by [**Google's AI for Social Good**](https://india.googleblog.com/2020/02/applying-ai-to-big-problemssix-research.html) initiative.
 
