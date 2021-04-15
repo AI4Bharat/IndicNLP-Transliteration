@@ -18,3 +18,9 @@ Open-source transliteration engine for Indian Subcontinent Languages, powered by
 * Tamil - தமிழ்
 * Telugu - తెలుగు
 * Urdu - اُردُو
+
+---
+
+**Visualization of regional scripts in the Indian sub-continent**
+
+![Indian Sub-continent](https://upload.wikimedia.org/wikipedia/commons/7/77/States_of_South_Asia.png)

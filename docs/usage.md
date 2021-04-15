@@ -2,8 +2,9 @@
 
 **What is Xlit?**
 
-X+lit is short for Trans+Literation.
-Xlit Engine is AI4Bharat's deep transliteration engine.
+X-Language Input Tool ecosystem; X ∈ {Languages of Indian Subcontinent}
+
+XlitEngine is AI4Bharat's deep transliteration engine, which power the Input Tool Ecosystem for Indian Launguages.
 
 ## Transliteration Python Library
 
