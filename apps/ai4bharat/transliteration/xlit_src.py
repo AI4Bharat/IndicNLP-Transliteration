@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import pandas as pd
 import random
 import sys
 import os
@@ -652,7 +653,7 @@ class XlitEngine():
                         print("XlitError: Language code {} not found, Skipping...".format(l))
         else:
             raise Exception("XlitError: lang2use must be a list of language codes (or) string of single language code" )
-        
+
         if is_directory_writable(F_DIR):
             models_path = os.path.join(F_DIR, 'models')
         else:
@@ -660,7 +661,7 @@ class XlitEngine():
             models_path = os.path.join(user_home, '.AI4Bharat_Xlit_Models')
         os.makedirs(models_path, exist_ok=True)
         self.download_models(models_path)
-        
+
         self.langs = {}
         self.lang_model = {}
         for la in self.lang_config:
@@ -692,19 +693,19 @@ class XlitEngine():
                 remote_url = MODEL_DOWNLOAD_URL_PREFIX + lang_name + '.zip'
                 downloaded_zip_path = os.path.join(models_path, lang_name + '.zip')
                 dload(url=remote_url, save_to_path=downloaded_zip_path, max_time=None)
-                
+
                 if not os.path.isfile(downloaded_zip_path):
                     exit(f'ERROR: Unable to download model from {remote_url} into {models_path}')
-                
+
                 with zipfile.ZipFile(downloaded_zip_path, 'r') as zip_ref:
                     zip_ref.extractall(models_path)
-                
+
                 if os.path.isdir(lang_model_path):
                     os.remove(downloaded_zip_path)
                 else:
                     exit(f'ERROR: Unable to find models in {lang_model_path} after download')
-        return        
-    
+        return
+
     def translit_word(self, eng_word, lang_code = "default", topk = 7, beam_width = 10):
         if eng_word == "":
             return []

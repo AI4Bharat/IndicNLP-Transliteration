@@ -9,21 +9,21 @@ This package provides support for:
 ## Languages Supported
 
 |ISO 639 code|Language|
-|---|-----------------|
-|bn |Bengali          |
-|gom|Konkani Goan     |
-|gu |Gujarati         |
-|hi |Hindi            |
-|kn |Kannada          |
-|mai|Maithili         |
-|ml |Malayalam        |
-|mr |Marathi          |
-|pa |Punjabi (Eastern)|
-|sd |Sindhi (Western) |
-|si |Sinhala          |
-|ta |Tamil            |
-|te |Telugu           |
-|ur |Urdu             |
+|---|---------------------|
+|bn |Bengali - বাংলা        |
+|gom|Gujarati - ગુજરાતી      |
+|gu |Hindi - हिंदी           |
+|hi |Kannada - ಕನ್ನಡ        |
+|kn |Konkani Goan - कोंकणी  |
+|mai|Maithili - मैथिली       |
+|ml |Malayalam - മലയാളം    |
+|mr |Marathi - मराठी        |
+|pa |Panjabi - ਪੰਜਾਬੀ       |
+|sd |Sindhi - سنڌي‎        |
+|si |Sinhala - සිංහල       |
+|ta |Telugu - తెలుగు        |
+|te |Tamil - தமிழ்         |
+|ur |Urdu - اُردُو          |
 
 ## Usage
 
