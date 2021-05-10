@@ -2,8 +2,7 @@
 Expose Transliteration Engine as an HTTP API.
 
 USAGE:
-    1. $ sudo env PATH=$PATH python3 api_expose.py
-       $ sudo env PATH=$PATH GOOGLE_APPLICATION_CREDENTIALS=/path_to_cred/ python3 api_expose.py
+    1. $ sudo env PATH=$PATH GOOGLE_APPLICATION_CREDENTIALS=/path_to_cred/ python3 api_expose.py
 
     2. Run in browser: production_port - 80
             http://localhost:8000/tl/ta/amma
@@ -23,10 +22,11 @@ from datetime import datetime
 
 ## ------------------------- Configure ---------------------------------------- ##
 
-CLOUD_STORE = False #
+CLOUD_STORE = False ##<<< UPDATE_AS_NEEDED
 DEBUG = True
+
 ## Set in order to host in specific domain
-SSL_FILES = None
+SSL_FILES = None ##<<< UPDATE_AS_NEEDED
 # SSL_FILES = ('/etc/letsencrypt/live/xlit-api.ai4bharat.org/fullchain.pem',
 #              '/etc/letsencrypt/live/xlit-api.ai4bharat.org/privkey.pem')
 
@@ -59,8 +59,8 @@ Requires gcp credentials
 if CLOUD_STORE:
     from google.cloud import firestore
     db = firestore.Client()
-    usrch_coll = "path_to_collection"
-    annot_coll = "path_to_collection"
+    usrch_coll = "path_to_collection" ##<<< UPDATE_AS_NEEDED
+    annot_coll = "path_to_collection" ##<<< UPDATE_AS_NEEDED
 
 def add_document(coll, data): # FireStore
     doc_title = str(uuid4().hex)
