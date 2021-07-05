@@ -21,8 +21,8 @@ This package provides support for:
 |pa |Panjabi - ਪੰਜਾਬੀ       |
 |sd |Sindhi - سنڌي‎        |
 |si |Sinhala - සිංහල       |
-|ta |Telugu - తెలుగు        |
-|te |Tamil - தமிழ்         |
+|te |Telugu - తెలుగు        |
+|ta |Tamil - தமிழ்         |
 |ur |Urdu - اُردُو          |
 
 ## Usage
