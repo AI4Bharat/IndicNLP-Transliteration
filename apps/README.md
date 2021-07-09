@@ -11,18 +11,18 @@ This package provides support for:
 |ISO 639 code|Language|
 |---|---------------------|
 |bn |Bengali - বাংলা        |
-|gom|Gujarati - ગુજરાતી      |
-|gu |Hindi - हिंदी           |
-|hi |Kannada - ಕನ್ನಡ        |
-|kn |Konkani Goan - कोंकणी  |
+|gu |Gujarati - ગુજરાતી      |
+|hi |Hindi - हिंदी           |
+|kn |Kannada - ಕನ್ನಡ        |
+|gom|Konkani Goan - कोंकणी  |
 |mai|Maithili - मैथिली       |
 |ml |Malayalam - മലയാളം    |
 |mr |Marathi - मराठी        |
 |pa |Panjabi - ਪੰਜਾਬੀ       |
 |sd |Sindhi - سنڌي‎        |
 |si |Sinhala - සිංහල       |
-|ta |Telugu - తెలుగు        |
-|te |Tamil - தமிழ்         |
+|te |Telugu - తెలుగు        |
+|ta |Tamil - தமிழ்         |
 |ur |Urdu - اُردُو          |
 
 ## Usage
